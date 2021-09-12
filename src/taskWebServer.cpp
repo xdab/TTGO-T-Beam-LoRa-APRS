@@ -172,6 +172,7 @@ void handle_Cfg() {
   jsonData += jsonLineFromPreferenceBool(PREF_APRS_SHOW_ALTITUDE);
   jsonData += jsonLineFromPreferenceBool(PREF_APRS_GPS_EN);
   jsonData += jsonLineFromPreferenceBool(PREF_ENABLE_TNC_SELF_TELEMETRY);
+  jsonData += jsonLineFromPreferenceInt(PREF_TNC_SELF_TELEMETRY_INTERVAL);
   jsonData += jsonLineFromPreferenceBool(PREF_DEV_OL_EN);
   jsonData += jsonLineFromPreferenceBool(PREF_APRS_SHOW_CMT);
   jsonData += jsonLineFromPreferenceBool(PREF_DEV_BT_EN);
@@ -255,6 +256,9 @@ void handle_SaveAPRSCfg() {
   }
   if (server.hasArg(PREF_APRS_SB_ANGLE_PRESET)){
     preferences.putDouble(PREF_APRS_SB_ANGLE_PRESET, server.arg(PREF_APRS_SB_ANGLE_PRESET).toDouble());
+  }
+  if (server.hasArg(PREF_TNC_SELF_TELEMETRY_INTERVAL)){
+    preferences.putInt(PREF_TNC_SELF_TELEMETRY_INTERVAL, server.arg(PREF_TNC_SELF_TELEMETRY_INTERVAL).toInt());
   }
 
   preferences.putBool(PREF_APRS_SHOW_BATTERY, server.hasArg(PREF_APRS_SHOW_BATTERY));

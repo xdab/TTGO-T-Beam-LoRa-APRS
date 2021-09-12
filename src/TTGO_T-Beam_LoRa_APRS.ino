@@ -103,6 +103,7 @@ boolean key_up = true;
 boolean t_lock = false;
 boolean fixed_beacon_enabled = false;
 boolean show_cmt = true;
+int tel_interval;
 
 #ifdef SHOW_ALT
   boolean showAltitude = true;
@@ -139,7 +140,6 @@ String LatShown="";
 String LongFixed="";
 String LatFixed="";
 
-//#if (enable_tel == true) && defined(KISS_PROTOCOL)
 #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
   time_t nextTelemetryFrame;
 #endif
@@ -485,7 +485,6 @@ String prepareCallsign(const String& callsign){
   return tmpString;
 }
 
-//#if (enable_tel == true) && defined(KISS_PROTOCOL)
 #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
   void sendTelemetryFrame() {
     if(enable_tel == true){
@@ -527,6 +526,12 @@ void setup(){
   #else
     relay_path = "";
   #endif
+
+  //#ifdef TNC_SELF_TELEMETRY_INTERVAL
+  //  tel_interval = TNC_SELF_TELEMETRY_INTERVAL;
+  //#else
+  //  tel_interval = 60;
+  //#endif
 
   #ifdef FIXED_BEACON_EN
     fixed_beacon_enabled = true;
@@ -603,6 +608,12 @@ void setup(){
       preferences.putBool(PREF_ENABLE_TNC_SELF_TELEMETRY, enable_tel);
     }
     enable_tel = preferences.getBool(PREF_ENABLE_TNC_SELF_TELEMETRY);
+
+    if (!preferences.getBool(PREF_TNC_SELF_TELEMETRY_INTERVAL_INIT)){
+      preferences.putBool(PREF_TNC_SELF_TELEMETRY_INTERVAL_INIT, true);
+      preferences.putInt(PREF_TNC_SELF_TELEMETRY_INTERVAL, tel_interval);
+    }
+    tel_interval = preferences.getInt(PREF_TNC_SELF_TELEMETRY_INTERVAL);
 
     if (!preferences.getBool(PREF_APRS_LATITUDE_PRESET_INIT)){
       preferences.putBool(PREF_APRS_LATITUDE_PRESET_INIT, true);
@@ -1033,7 +1044,7 @@ void loop() {
   //#if (enable_tel == true) && defined(KISS_PROTOCOL)
   #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
     if (nextTelemetryFrame < millis()){
-      nextTelemetryFrame = millis() + TNC_SELF_TELEMETRY_INTERVAL;
+      nextTelemetryFrame = millis() + (TNC_SELF_TELEMETRY_INTERVAL * 1000);
       sendTelemetryFrame();
     }
   #endif
