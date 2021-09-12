@@ -1044,7 +1044,7 @@ void loop() {
   //#if (enable_tel == true) && defined(KISS_PROTOCOL)
   #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
     if (nextTelemetryFrame < millis()){
-      nextTelemetryFrame = millis() + (TNC_SELF_TELEMETRY_INTERVAL * 1000);
+      nextTelemetryFrame = millis() + (tel_interval * 1000);
       sendTelemetryFrame();
     }
   #endif
