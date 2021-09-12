@@ -114,6 +114,11 @@ boolean show_cmt = true;
 #else
   boolean showBattery = false;
 #endif
+#ifdef ENABLE_TNC_SELF_TELEMETRY
+  boolean enable_tel = true;
+#else
+  boolean enable_tel = false;
+#endif
 #ifdef ENABLE_BLUETOOTH
   boolean enable_bluetooth = true;
 #else
@@ -134,6 +139,7 @@ String LatShown="";
 String LongFixed="";
 String LatFixed="";
 
+//#if (enable_tel == true) && defined(KISS_PROTOCOL)
 #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
   time_t nextTelemetryFrame;
 #endif
@@ -479,28 +485,31 @@ String prepareCallsign(const String& callsign){
   return tmpString;
 }
 
+//#if (enable_tel == true) && defined(KISS_PROTOCOL)
 #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
-void sendTelemetryFrame() {
-  #ifdef T_BEAM_V1_0
-    uint8_t b_volt = (axp.getBattVoltage() - 3000) / 5.1;
-    uint8_t b_in_c = (axp.getBattChargeCurrent()) / 10;
-    uint8_t b_out_c = (axp.getBattDischargeCurrent()) / 10;
-    uint8_t ac_volt = (axp.getVbusVoltage() - 3000) / 28;
-    uint8_t ac_c = (axp.getVbusCurrent()) / 10;
+  void sendTelemetryFrame() {
+    if(enable_tel == true){
+      #ifdef T_BEAM_V1_0
+        uint8_t b_volt = (axp.getBattVoltage() - 3000) / 5.1;
+        uint8_t b_in_c = (axp.getBattChargeCurrent()) / 10;
+        uint8_t b_out_c = (axp.getBattDischargeCurrent()) / 10;
+        uint8_t ac_volt = (axp.getVbusVoltage() - 3000) / 28;
+        uint8_t ac_c = (axp.getVbusCurrent()) / 10;
 
-    String telemetryParamsNames = String(":") + Tcall + ":PARM.B Volt,B In,B Out,AC V,AC C";
-    String telemetryUnitNames = String(":") + Tcall + ":UNIT.mV,mA,mA,mV,mA";
-    String telemetryEquations = String(":") + Tcall + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
-    String telemetryData = String("T#MIC") + String(b_volt) + ","+ String(b_in_c) + ","+ String(b_out_c) + ","+ String(ac_volt) + ","+ String(ac_c) + ",00000000";
-    String telemetryBase = "";
-    telemetryBase += Tcall + ">APLO01" + ":";
-    sendToTNC(telemetryBase + telemetryParamsNames);
-    sendToTNC(telemetryBase + telemetryUnitNames);
-    sendToTNC(telemetryBase + telemetryEquations);
-    sendToTNC(telemetryBase + telemetryData);
+        String telemetryParamsNames = String(":") + Tcall + ":PARM.B Volt,B In,B Out,AC V,AC C";
+        String telemetryUnitNames = String(":") + Tcall + ":UNIT.mV,mA,mA,mV,mA";
+        String telemetryEquations = String(":") + Tcall + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
+        String telemetryData = String("T#MIC") + String(b_volt) + ","+ String(b_in_c) + ","+ String(b_out_c) + ","+ String(ac_volt) + ","+ String(ac_c) + ",00000000";
+        String telemetryBase = "";
+        telemetryBase += Tcall + ">APLO01" + ":";
+        sendToTNC(telemetryBase + telemetryParamsNames);
+        sendToTNC(telemetryBase + telemetryUnitNames);
+        sendToTNC(telemetryBase + telemetryEquations);
+        sendToTNC(telemetryBase + telemetryData);
+    }
+    #endif
+  }
   #endif
-}
-#endif
 
 // + SETUP --------------------------------------------------------------+//
 void setup(){
@@ -588,6 +597,12 @@ void setup(){
       preferences.putBool(PREF_APRS_SHOW_BATTERY, showBattery);
     }
     showBattery = preferences.getBool(PREF_APRS_SHOW_BATTERY);
+
+     if (!preferences.getBool(PREF_ENABLE_TNC_SELF_TELEMETRY_INIT)){
+      preferences.putBool(PREF_ENABLE_TNC_SELF_TELEMETRY_INIT, true);
+      preferences.putBool(PREF_ENABLE_TNC_SELF_TELEMETRY, enable_tel);
+    }
+    enable_tel = preferences.getBool(PREF_ENABLE_TNC_SELF_TELEMETRY);
 
     if (!preferences.getBool(PREF_APRS_LATITUDE_PRESET_INIT)){
       preferences.putBool(PREF_APRS_LATITUDE_PRESET_INIT, true);
@@ -1015,6 +1030,7 @@ void loop() {
       }
     }
   }
+  //#if (enable_tel == true) && defined(KISS_PROTOCOL)
   #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
     if (nextTelemetryFrame < millis()){
       nextTelemetryFrame = millis() + TNC_SELF_TELEMETRY_INTERVAL;

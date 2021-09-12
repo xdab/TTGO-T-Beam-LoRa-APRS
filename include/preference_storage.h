@@ -7,7 +7,7 @@
 #define ENABLE_PREFERENCES
 extern Preferences preferences;
 
-// MAX 15 chars for preferenece key!!!
+// MAX 15 chars for preference key!!!
 static const char *const PREF_WIFI_SSID = "wifi_ssid";
 static const char *const PREF_WIFI_PASSWORD = "wifi_password";
 // LoRa settings
@@ -35,6 +35,8 @@ static const char *const PREF_APRS_FIXED_BEACON_PRESET = "aprs_fixed_beac";
 static const char *const PREF_APRS_FIXED_BEACON_PRESET_INIT = "aprs_fix_b_init";
 static const char *const PREF_APRS_FIXED_BEACON_INTERVAL_PRESET = "aprs_fb_interv";
 static const char *const PREF_APRS_FIXED_BEACON_INTERVAL_PRESET_INIT = "aprs_fb_in_init";
+static const char *const PREF_ENABLE_TNC_SELF_TELEMETRY = "aprs_self_tel";
+static const char *const PREF_ENABLE_TNC_SELF_TELEMETRY_INIT = "aprs_self_tel_i";
 // SMART BEACONING
 static const char *const PREF_APRS_SB_MIN_INTERVAL_PRESET = "sb_min_interv";
 static const char *const PREF_APRS_SB_MIN_INTERVAL_PRESET_INIT = "sb_min_interv_i";
