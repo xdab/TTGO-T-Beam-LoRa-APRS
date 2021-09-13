@@ -406,15 +406,15 @@ String getSatAndBatInfo() {
   String line5;
   if(gps_state == true){
     if(InpVolts > 4){
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V *";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V *";
     }else{
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V";
     }
   }else{
     if(InpVolts > 4){
-      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V *";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V *";
     }else{
-      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V";
     }
     
   }
@@ -785,7 +785,7 @@ void setup(){
     adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_6);
   #endif
   batt_read();
-  writedisplaytext("LoRa-APRS","","Init:","ADC OK!","BAT: "+String(BattVolts,1),"");
+  writedisplaytext("LoRa-APRS","","Init:","ADC OK!","BAT: "+String(BattVolts,2),"");
   
   if(lora_speed==1200)
     rf95.setModemConfig(BG_RF95::Bw125Cr47Sf512);
