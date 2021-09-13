@@ -494,11 +494,15 @@ String prepareCallsign(const String& callsign){
         uint8_t b_out_c = (axp.getBattDischargeCurrent()) / 10;
         uint8_t ac_volt = (axp.getVbusVoltage() - 3000) / 28;
         uint8_t ac_c = (axp.getVbusCurrent()) / 10;
+        // Pad telemetry message address to 9 characters
+        char Tcall_message_char[9];
+        sprintf_P(Tcall_message_char, "%-9s", Tcall);
+        String Tcall_message = String(Tcall_message_char);
 
-        String telemetryParamsNames = String(":") + Tcall + ":PARM.B Volt,B In,B Out,AC V,AC C";
-        String telemetryUnitNames = String(":") + Tcall + ":UNIT.mV,mA,mA,mV,mA";
-        String telemetryEquations = String(":") + Tcall + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
-        String telemetryData = String("T#MIC") + String(b_volt) + ","+ String(b_in_c) + ","+ String(b_out_c) + ","+ String(ac_volt) + ","+ String(ac_c) + ",00000000";
+        String telemetryParamsNames = String(":") + Tcall_message + ":PARM.B Volt,B In,B Out,AC V,AC C";
+        String telemetryUnitNames = String(":") + Tcall_message + ":UNIT.mV,mA,mA,mV,mA";
+        String telemetryEquations = String(":") + Tcall_message + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
+        String telemetryData = String("T#") + String(b_volt) + ","+ String(b_in_c) + ","+ String(b_out_c) + ","+ String(ac_volt) + ","+ String(ac_c) + ",00000000";
         String telemetryBase = "";
         telemetryBase += Tcall + ">APLO01," + relay_path + ":";
         Serial.print(telemetryBase);
