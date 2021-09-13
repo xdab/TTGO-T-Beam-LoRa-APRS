@@ -500,7 +500,8 @@ String prepareCallsign(const String& callsign){
         String telemetryEquations = String(":") + Tcall + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
         String telemetryData = String("T#MIC") + String(b_volt) + ","+ String(b_in_c) + ","+ String(b_out_c) + ","+ String(ac_volt) + ","+ String(ac_c) + ",00000000";
         String telemetryBase = "";
-        telemetryBase += Tcall + ">APLO01" + ":";
+        telemetryBase += Tcall + ">APLO01," + relay_path + ":";
+        Serial.print(telemetryBase);
         sendToTNC(telemetryBase + telemetryParamsNames);
         sendToTNC(telemetryBase + telemetryUnitNames);
         sendToTNC(telemetryBase + telemetryEquations);
