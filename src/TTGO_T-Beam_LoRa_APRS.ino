@@ -181,6 +181,13 @@ boolean shutdown_active =true;
 boolean shutdown_countdown_timer_enable = false;
 boolean shutdown_usb_status_bef = false;
 
+// Variables required to Power Save OLED
+// With "Display dimmer enabled" it will turn OLED off after some time
+// if the checkbox is disabled the display stays OFF
+uint oled_timeout; // OLED Timeout, same as "Display show RX Time"
+bool tempOled = true; // Turn ON OLED at first startup
+ulong oled_timer = millis();
+
 #define ANGLE_AVGS 3                  // angle averaging - x times
 float average_course[ANGLE_AVGS];
 float avg_c_y, avg_c_x;
@@ -387,10 +394,10 @@ void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3
   display.println(Line5);
   if (enabled_oled){
     //axp.setPowerOutPut(AXP192_DCDC1, AXP202_ON);                          // enable oled
-    display.dim(true);
+    //display.dim(false);
   }else{
     //axp.setPowerOutPut(AXP192_DCDC1, AXP202_OFF);                          // disable oled
-    display.dim(false);
+    display.dim(true);
   }   
   display.display();
   time_to_refresh = millis() + showRXTime;
@@ -400,15 +407,15 @@ String getSatAndBatInfo() {
   String line5;
   if(gps_state == true){
     if(InpVolts > 4){
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V *";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V *";
     }else{
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V";
     }
   }else{
     if(InpVolts > 4){
-      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V *";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V *";
     }else{
-      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V";
     }
     
   }
@@ -653,6 +660,8 @@ void setup(){
       preferences.putInt(PREF_DEV_SHOW_RX_TIME, showRXTime/1000);
     }
     showRXTime = preferences.getInt(PREF_DEV_SHOW_RX_TIME) * 1000;
+    // Use same timer for OLED timeout
+    oled_timeout = showRXTime;
     
     if (!preferences.getBool(PREF_DEV_AUTO_SHUT_PRESET_INIT)){
       preferences.putBool(PREF_DEV_AUTO_SHUT_PRESET_INIT, true);
@@ -779,7 +788,7 @@ void setup(){
     adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_6);
   #endif
   batt_read();
-  writedisplaytext("LoRa-APRS","","Init:","ADC OK!","BAT: "+String(BattVolts,1),"");
+  writedisplaytext("LoRa-APRS","","Init:","ADC OK!","BAT: "+String(BattVolts,2),"");
   
   if(lora_speed==1200)
     rf95.setModemConfig(BG_RF95::Bw125Cr47Sf512);
@@ -821,6 +830,12 @@ void setup(){
   digitalWrite(TXLED, HIGH);
 }
 
+void enableOled() {
+  // This function enables OLED display after pressing a button
+  tempOled = true;
+  oled_timer = millis() + oled_timeout;
+}
+
 // +---------------------------------------------------------------------+//
 // + MAINLOOP -----------------------------------------------------------+//
 // +---------------------------------------------------------------------+//
@@ -832,19 +847,35 @@ void loop() {
       delay(300);
       time_delay = millis() + 1500;
       if(digitalRead(BUTTON)==HIGH){
-        if(gps_state == true && gps.location.isValid()){
-            writedisplaytext("((MAN TX))","","","","","");
-            sendpacket();
-        }else{
-            writedisplaytext("((FIX TX))","","","","","");
-            sendpacket();
+        if (!tempOled && enabled_oled) {
+        enableOled(); // turn ON OLED temporary
+        } else {
+          if(gps_state == true && gps.location.isValid()){
+              writedisplaytext("((MAN TX))","","","","","");
+              sendpacket();
+          }else{
+              writedisplaytext("((FIX TX))","","","","","");
+              sendpacket();
+          }
         }
         key_up = true;
       }
     }
   }
 
+  // Only wake up OLED when necessary, note that DIM is to turn OFF the backlight
+  if (enabled_oled) {
+    display.dim(!tempOled);
+  } 
+
+  if (tempOled && millis()>= oled_timer) {
+    tempOled = false; // After some time reset backlight
+  }
+
   if(digitalRead(BUTTON)==LOW && key_up == false && millis() >= time_delay && t_lock == false){
+    // enable OLED
+    enableOled();
+    //---------------
     t_lock = true;
       if(gps_state){
         gps_state = false;
@@ -856,8 +887,6 @@ void loop() {
         #ifdef ENABLE_PREFERENCES
           preferences.putBool(PREF_APRS_GPS_EN, false);
         #endif
-
-
       }else{
         gps_state = true;
         #ifdef T_BEAM_V1_0
@@ -877,6 +906,7 @@ void loop() {
 
   if (fixed_beacon_enabled) {
     if (millis() >= next_fixed_beacon && !gps_state) {
+      enableOled(); // enable OLED
       next_fixed_beacon = millis() + fix_beacon_interval;
       writedisplaytext("((AUT TX))", "", "", "", "", "");
       sendpacket();
@@ -908,6 +938,7 @@ void loop() {
     String *TNC2DataFrame = nullptr;
     if (tncToSendQueue) {
       if (xQueueReceive(tncToSendQueue, &TNC2DataFrame, (1 / portTICK_PERIOD_MS)) == pdPASS) {
+        enableOled(); // enable OLED
         writedisplaytext("((KISSTX))","","","","","");
         time_to_refresh = millis() + showRXTime;
         loraSend(txPower, lora_freq, *TNC2DataFrame);
@@ -932,6 +963,7 @@ void loop() {
         loraReceivedFrameString = "";
         //int rssi = rf95.lastSNR();
         //Serial.println(rssi);
+        enableOled(); // enable OLED
         for (int i=0 ; i < loraReceivedLength ; i++) {
           loraReceivedFrameString += (char) lora_RXBUFF[i];
         }
@@ -999,6 +1031,7 @@ void loop() {
   }
   if ( (lastTX+nextTX) <= millis()  ) {
     if (gps.location.age() < 2000) {
+      enableOled(); // enable OLED
       writedisplaytext(" ((TX))","","LAT: "+LatShown,"LON: "+LongShown,"SPD: "+String(gps.speed.kmph(),1)+"  CRS: "+String(gps.course.deg(),1),getSatAndBatInfo());
       sendpacket();
     } else {
