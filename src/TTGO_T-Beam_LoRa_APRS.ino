@@ -248,10 +248,10 @@ void prepareAPRSFrame(){
   outString = "";
   outString += Tcall;
 
-  if (relay_path){
-    outString += ">APLO01," + relay_path + ":!";
-  }else{
+  if (relay_path.isEmpy()){
     outString += ">APLO01:!";
+  }else{
+    outString += ">APLO01," + relay_path + ":!";
   }
 
   if(gps_state && gps.location.isValid()){
