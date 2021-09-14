@@ -181,11 +181,10 @@ boolean shutdown_active =true;
 boolean shutdown_countdown_timer_enable = false;
 boolean shutdown_usb_status_bef = false;
 
-// Variables added by LucaFRL
-ulong oled_timeout = 20000;
-bool tempOled = true;
+// Variables required to Power Save OLED
+ulong oled_timeout = 20000; // OLED Timeout
+bool tempOled = true; // Turn ON OLED at first startup
 ulong oled_timer = millis();
-//-------------------------------
 
 #define ANGLE_AVGS 3                  // angle averaging - x times
 float average_course[ANGLE_AVGS];
@@ -828,6 +827,7 @@ void setup(){
 }
 
 void enableOled() {
+  // This function enables OLED display after pressing a button
   tempOled = true;
   oled_timer = millis() + oled_timeout;
 }
@@ -844,9 +844,7 @@ void loop() {
       time_delay = millis() + 1500;
       if(digitalRead(BUTTON)==HIGH){
         if (!tempOled) {
-        // turn ON OLED temporary
-        enableOled();
-        //----------------------------
+        enableOled(); // turn ON OLED temporary
         } else {
           if(gps_state == true && gps.location.isValid()){
               writedisplaytext("((MAN TX))","","","","","");
@@ -861,13 +859,12 @@ void loop() {
     }
   }
 
-  // Only wake up OLED when necessary
+  // Only wake up OLED when necessary, note that DIM is to turn OFF the backlight
   display.dim(!tempOled);
 
   if (tempOled && millis()>= oled_timer) {
-    tempOled = false;
+    tempOled = false; // After some time reset backlight
   }
-  //------------------------------------
 
   if(digitalRead(BUTTON)==LOW && key_up == false && millis() >= time_delay && t_lock == false){
     // enable OLED
@@ -884,8 +881,6 @@ void loop() {
         #ifdef ENABLE_PREFERENCES
           preferences.putBool(PREF_APRS_GPS_EN, false);
         #endif
-
-
       }else{
         gps_state = true;
         #ifdef T_BEAM_V1_0
@@ -905,9 +900,7 @@ void loop() {
 
   if (fixed_beacon_enabled) {
     if (millis() >= next_fixed_beacon && !gps_state) {
-      // enable OLED
-      enableOled();
-      //---------------
+      enableOled(); // enable OLED
       next_fixed_beacon = millis() + fix_beacon_interval;
       writedisplaytext("((AUT TX))", "", "", "", "", "");
       sendpacket();
@@ -939,6 +932,7 @@ void loop() {
     String *TNC2DataFrame = nullptr;
     if (tncToSendQueue) {
       if (xQueueReceive(tncToSendQueue, &TNC2DataFrame, (1 / portTICK_PERIOD_MS)) == pdPASS) {
+        enableOled(); // enable OLED
         writedisplaytext("((KISSTX))","","","","","");
         time_to_refresh = millis() + showRXTime;
         loraSend(txPower, lora_freq, *TNC2DataFrame);
@@ -963,9 +957,7 @@ void loop() {
         loraReceivedFrameString = "";
         //int rssi = rf95.lastSNR();
         //Serial.println(rssi);
-        // enable OLED
-        enableOled();
-        //---------------
+        enableOled(); // enable OLED
         for (int i=0 ; i < loraReceivedLength ; i++) {
           loraReceivedFrameString += (char) lora_RXBUFF[i];
         }
@@ -1033,9 +1025,7 @@ void loop() {
   }
   if ( (lastTX+nextTX) <= millis()  ) {
     if (gps.location.age() < 2000) {
-      // enable OLED
-      enableOled();
-      //---------------
+      enableOled(); // enable OLED
       writedisplaytext(" ((TX))","","LAT: "+LatShown,"LON: "+LongShown,"SPD: "+String(gps.speed.kmph(),1)+"  CRS: "+String(gps.course.deg(),1),getSatAndBatInfo());
       sendpacket();
     } else {
