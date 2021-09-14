@@ -17,16 +17,20 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * TTGO T-beam v.1.0 
 * Lora32 board
 
-
 ## User key functions:
-### short press:
-* if there is a GPS-FIX immediate sending of a frame with the position from the GPS
-* if there is no GPS-FIX, immediate sending of the frame with the position saved in the configuration
+### short press (OLED Enabled):
+* if OLED is OFF a short press will wake it up and show current data
+* if OLED is ON with GPS-FIX immediate sending of a frame with the position from the GPS
+* if OLED is ON without GPS-FIX, immediate sending of the frame with the position saved in the configuration
 
-### long press On boot 
+### short press (OLED Disabled):
+* with a valid GPS-FIX immediate sending of a frame with the position from the GPS
+* without valid GPS-FIX, immediate sending of the frame with the position saved in the configuration
+
+### long press while booting 
 * reset to factory default
 
-### long press: on or off the GPS power supply 
+### long press: toggle on or off GPS power supply 
 * if the "FIXED_BEACON_EN" option is enabled in the configuration, a beacon will be sent every set time interval
 
 ## Oled screens information
@@ -38,12 +42,11 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * ((FIX TX)) - information about the forced manual sending of a frame with the position saved in the configuration when GPS is off or no fix
 * ((AUT TX)) - information about sending automatic positioning frame when GPS is turned off
 * ((KISSTX)) - information about sending the frame sent by KISS
+* ((WEB TX)) - sending frame as requested via HTTP
 
 ## How to binary first flash readme... (thanx SP6VWX)
-* Download the appropriate binary file for your board from;
-* https://github.com/SQ9MDD/TTGO-T-Beam-LoRa-APRS/releases
-* Download current version of the esphome-flasher tool
-* https://github.com/esphome/esphome-flasher/releases
+* Download the appropriate binary file for your board from: https://github.com/SQ9MDD/TTGO-T-Beam-LoRa-APRS/releases
+* Download current version of the esphome-flasher tool: https://github.com/esphome/esphome-flasher/releases
 * Connect your board to your USB port and open ESPHome Flasher.
 * If your board is not showing under Serial Port then you likely need to install the drivers for the CP210X serial chip. In Windows you can check by searching “Device Manager” and ensuring the device is shown under “Ports”.
 * In ESPHome Flasher, refresh the serial ports and select your board's serial port.
@@ -51,6 +54,14 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * Select/Press Flash ESP.
 * Once complete, “Done! Flashing is complete!” will be shown.
 * any subsequent updates can be done via WWW
+
+## Installing from source (only for advanced users)
+* Clone Git repo to any folder of your PC
+* Download and install "Visual Studio Code"
+* Open "Visual Studio Code" and add "PlatformIO" plugin
+* Open "PlatformIO" and click on "Import Arduino Project"
+* In the top part of the window choose youy board then browse to cloned repo and click "import"
+* In the left column click on the ANT-shaped icon, choose your board and click on "Upload". COM port should be detected automatically Wait for procedure to finish and keep reading
 
 ## Default WiFi Password:
 

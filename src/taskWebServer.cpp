@@ -16,6 +16,9 @@ extern const char web_style_css_end[] asm("_binary_data_embed_style_css_out_end"
 extern const char web_js_js[] asm("_binary_data_embed_js_js_out_start");
 extern const char web_js_js_end[] asm("_binary_data_embed_js_js_out_end");
 
+// Variable needed to send beacon from html page
+extern bool manBeacon;
+
 QueueHandle_t webListReceivedQueue = nullptr;
 std::list <tReceivedPacketData*> receivedPackets;
 const int MAX_RECEIVED_LIST_SIZE = 50;
@@ -130,8 +133,13 @@ void handle_Reboot() {
   ESP.restart();
 }
 
-void handle_Shutdown() {
+void handle_Beacon() {
+  server.sendHeader("Location", "/");
+  server.send(302,"text/html", "");
+  manBeacon=true;
+}
 
+void handle_Shutdown() {
   #ifdef T_BEAM_V1_0
     server.send(200,"text/html", "Shutdown");
     axp.shutdown();
@@ -291,6 +299,7 @@ void handle_saveDeviceCfg(){
   server.on("/scan_wifi", handle_ScanWifi);
   server.on("/save_wifi_cfg", handle_SaveWifiCfg);
   server.on("/reboot", handle_Reboot);
+  server.on("/beacon", handle_Beacon);
   server.on("/shutdown", handle_Shutdown);
   server.on("/cfg", handle_Cfg);
   server.on("/received_list", handle_ReceivedList);
