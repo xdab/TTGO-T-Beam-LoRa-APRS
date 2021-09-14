@@ -182,7 +182,9 @@ boolean shutdown_countdown_timer_enable = false;
 boolean shutdown_usb_status_bef = false;
 
 // Variables required to Power Save OLED
-ulong oled_timeout = 20000; // OLED Timeout
+// With "Display dimmer enabled" it will turn OLED off after some time
+// if the checkbox is disabled the display stays OFF
+uint oled_timeout; // OLED Timeout, same as "Display show RX Time"
 bool tempOled = true; // Turn ON OLED at first startup
 ulong oled_timer = millis();
 
@@ -392,10 +394,10 @@ void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3
   display.println(Line5);
   if (enabled_oled){
     //axp.setPowerOutPut(AXP192_DCDC1, AXP202_ON);                          // enable oled
-    //display.dim(true);
+    //display.dim(false);
   }else{
     //axp.setPowerOutPut(AXP192_DCDC1, AXP202_OFF);                          // disable oled
-    //display.dim(false);
+    display.dim(true);
   }   
   display.display();
   time_to_refresh = millis() + showRXTime;
@@ -658,6 +660,8 @@ void setup(){
       preferences.putInt(PREF_DEV_SHOW_RX_TIME, showRXTime/1000);
     }
     showRXTime = preferences.getInt(PREF_DEV_SHOW_RX_TIME) * 1000;
+    // Use same timer for OLED timeout
+    oled_timeout = showRXTime;
     
     if (!preferences.getBool(PREF_DEV_AUTO_SHUT_PRESET_INIT)){
       preferences.putBool(PREF_DEV_AUTO_SHUT_PRESET_INIT, true);
@@ -843,7 +847,7 @@ void loop() {
       delay(300);
       time_delay = millis() + 1500;
       if(digitalRead(BUTTON)==HIGH){
-        if (!tempOled) {
+        if (!tempOled && enabled_oled) {
         enableOled(); // turn ON OLED temporary
         } else {
           if(gps_state == true && gps.location.isValid()){
@@ -860,7 +864,9 @@ void loop() {
   }
 
   // Only wake up OLED when necessary, note that DIM is to turn OFF the backlight
-  display.dim(!tempOled);
+  if (enabled_oled) {
+    display.dim(!tempOled);
+  } 
 
   if (tempOled && millis()>= oled_timer) {
     tempOled = false; // After some time reset backlight
