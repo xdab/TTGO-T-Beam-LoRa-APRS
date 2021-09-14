@@ -362,7 +362,7 @@ void batt_read(){
   BattVolts = axp.getBattVoltage()/1000;
   InpVolts = axp.getVbusVoltage()/1000;
 #else
-  BattVolts = analogRead(35)*7.221/8192;
+  BattVolts = analogRead(35)*7.221/8192;    // fixed thanks to Luca IU2FRL 
 #endif
 }
 
