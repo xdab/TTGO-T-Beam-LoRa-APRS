@@ -675,7 +675,7 @@ void setup(){
     // Read OLED RX Timer
     if (!preferences.getBool(PREF_DEV_SHOW_OLED_TIME_INIT)){
       preferences.putBool(PREF_DEV_SHOW_OLED_TIME_INIT, true);
-      preferences.putInt(PREF_DEV_SHOW_OLED_TIME, showRXTime/1000);
+      preferences.putInt(PREF_DEV_SHOW_OLED_TIME, oled_timeout/1000);
     }
     oled_timeout = preferences.getInt(PREF_DEV_SHOW_OLED_TIME) * 1000;
     

@@ -62,6 +62,6 @@ static const char *const PREF_DEV_AUTO_SHUT_INIT = "shutdown_actini";
 static const char *const PREF_DEV_AUTO_SHUT_PRESET = "shutdown_dt";
 static const char *const PREF_DEV_AUTO_SHUT_PRESET_INIT = "shutdown_dtini";
 static const char *const PREF_DEV_SHOW_OLED_TIME = "sh_oledtime"; // set OLED timeout
-static const char *const PREF_DEV_SHOW_OLED_TIME_INIT = "sh_oledtime_init";
+static const char *const PREF_DEV_SHOW_OLED_TIME_INIT = "sh_oledtime_i";
 
 #endif
