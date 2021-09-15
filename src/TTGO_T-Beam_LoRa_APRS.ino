@@ -883,6 +883,7 @@ void loop() {
   }
 
   if (manBeacon) {
+    // Manually sending beacon from html page
     enableOled();
     writedisplaytext("((WEB TX))","","","","","");
     sendpacket();
@@ -891,7 +892,7 @@ void loop() {
   // Only wake up OLED when necessary, note that DIM is to turn OFF the backlight
   if (enabled_oled) {
     if (oled_timeout>0) {
-    display.dim(!tempOled);
+      display.dim(!tempOled);
     } else {
       // If timeout is 0 keep OLED awake
       display.dim(false);
