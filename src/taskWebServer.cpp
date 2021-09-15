@@ -185,6 +185,7 @@ void handle_Cfg() {
   jsonData += jsonLineFromPreferenceInt(PREF_DEV_SHOW_RX_TIME);
   jsonData += jsonLineFromPreferenceBool(PREF_DEV_AUTO_SHUT);
   jsonData += jsonLineFromPreferenceInt(PREF_DEV_AUTO_SHUT_PRESET);
+  jsonData += jsonLineFromPreferenceInt(PREF_DEV_SHOW_OLED_TIME);
   jsonData += jsonLineFromInt("FreeHeap", ESP.getFreeHeap());
   jsonData += jsonLineFromInt("HeapSize", ESP.getHeapSize());
   jsonData += jsonLineFromInt("FreeSketchSpace", ESP.getFreeSketchSpace());
@@ -279,6 +280,10 @@ void handle_saveDeviceCfg(){
   preferences.putBool(PREF_DEV_OL_EN, server.hasArg(PREF_DEV_OL_EN));
   if (server.hasArg(PREF_DEV_SHOW_RX_TIME)){
     preferences.putInt(PREF_DEV_SHOW_RX_TIME, server.arg(PREF_DEV_SHOW_RX_TIME).toInt());
+  }
+  // Manage OLED Timeout
+  if (server.hasArg(PREF_DEV_SHOW_OLED_TIME)){
+    preferences.putInt(PREF_DEV_SHOW_OLED_TIME, server.arg(PREF_DEV_SHOW_OLED_TIME).toInt());
   }
   preferences.putBool(PREF_DEV_AUTO_SHUT, server.hasArg(PREF_DEV_AUTO_SHUT));
   if (server.hasArg(PREF_DEV_AUTO_SHUT_PRESET)){

@@ -167,7 +167,7 @@
             <div class="grid-container quarters">
                 <div>
                     <label for="oled_enabled">OLED Display enabled</label>
-                    <input name="oled_enabled" id="oled_enabled" type="checkbox" value="1" title="ON: Display will turn ON when pushing button. OFF: Stays OFF">
+                    <input name="oled_enabled" id="oled_enabled" type="checkbox" value="1" title="Enables or disables OLED">
                 </div>                
                 <div>
                     <label for="bt_enabled">Bluetooth enabled</label>
@@ -184,17 +184,18 @@
             </div>   
             <div class="grid-container quarters">
                 <div>
-                    <label for="sh_rxtime">Display show RX time (s)</label>
+                    <label for="sh_rxtime">Display show RX time [s]</label>
                     <input name="sh_rxtime" id="sh_rxtime" type="number" min="0" max="45" title="show RX packet for seconds">
                 </div> 
                 <div>
-
+                    <label for="sh_oledtime">Display timeout [s]</label>
+                    <input name="sh_oledtime" id="sh_oledtime" type="number" min="0" max="60" title="Turn OFF OLED after X seconds. Set 0 to disable">
                 </div>
                 <div>
 
                 </div>
                 <div>
-                    <label for="shutdown_dt">Auto power off delay (s)</label>
+                    <label for="shutdown_dt">Auto power off delay [s]</label>
                     <input name="shutdown_dt" id="shutdown_dt" type="number" min="3" max="3600" title="auto shutdown delay in seconds">
                 </div>                               
             </div>                      
