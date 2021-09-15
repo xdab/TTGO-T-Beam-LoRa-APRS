@@ -63,7 +63,27 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * In the top part of the window choose youy board then browse to cloned repo and click "import"
 * In the left column click on the ANT-shaped icon, choose your board and click on "Upload". COM port should be detected automatically Wait for procedure to finish and keep reading
 
-## Default WiFi Password:
+## Configuring parameters
+Wait for the board to reboot, connect to "N0CALL AP" WiFi network, password is: xxxxxxxxxx (10 times "x") and point your browser to "192.168.4.1"
 
+### WiFi Settings
+you can scan for local SSID or manually type in name and password
+
+###  APRS Settings
+These are main APRS settings such as callsign, SSID and symbol (refer to: http://www.aprs.org/symbols.html). Please remember to turn ON GPS in order to use it as a tracker
+
+### Device Settings
+These are main device settings, hover the mouse on the checkboxes and explainations will appear Note: as of 09/2021 "Auto Power OFF" is enabled only with TBEAM 1.0, it will turn board off after unplugging USB
+
+### Received
+Here is the list of recently received stations with some details
+
+### Actions
+Some shortcuts to useful functions such as manually send beacon
+
+### Update
+This box allows firmware to be uploaded via OTA
+
+## Default WiFi Password:
 * Default WiFi Password is: xxxxxxxxxx
 * that is, 10 times x
