@@ -76,7 +76,6 @@ you can scan for local SSID or manually type in name and password
 These are main APRS settings such as callsign, SSID and symbol (refer to: http://www.aprs.org/symbols.html). Please remember to turn ON GPS in order to use it as a tracker.
 * Frequency: frequency of receive and transmit
 * Speed: speed of the LoRa APRS packet (default: 300)
-
 * Callsign and SSID: Callsign of the tracker (e.g: N0CALL-10)
 * Relay PATH: destination path of APRS packet
 * Symbol table & Symbol: custom APRS icon
@@ -84,11 +83,9 @@ These are main APRS settings such as callsign, SSID and symbol (refer to: http:/
 * Show comment: includes comment in APRS packet
 * Comment: custom message to send
 * Show Battery: includes current battery voltage
-
 * Fixed beacon: enables static beacon transmission
 * Fixed beacon interval: beacon interval in seconds (please more than 30 minutes to avoid overflow on the network)
 * Latitude & Longitude: fixed beacon position to transmit (in APRS format)
-
 * Min interval: packet are transmitted not less than x second apart
 * Max interval: maximum interval between packages
 * Speed and course: variables to calculate smart beaconing
