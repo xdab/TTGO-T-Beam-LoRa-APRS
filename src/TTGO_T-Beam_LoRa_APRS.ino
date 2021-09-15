@@ -184,9 +184,9 @@ boolean shutdown_usb_status_bef = false;
 // Variables required to Power Save OLED
 // With "Display dimmer enabled" it will turn OLED off after some time
 // if the checkbox is disabled the display stays OFF
-uint oled_timeout; // OLED Timeout, same as "Display show RX Time"
+uint oled_timeout = SHOW_OLED_TIME; // OLED Timeout
 bool tempOled = true; // Turn ON OLED at first startup
-ulong oled_timer = millis();
+ulong oled_timer;
 
 // Variable to manually send beacon from html page
 bool manBeacon = false;
@@ -671,8 +671,13 @@ void setup(){
       preferences.putInt(PREF_DEV_SHOW_RX_TIME, showRXTime/1000);
     }
     showRXTime = preferences.getInt(PREF_DEV_SHOW_RX_TIME) * 1000;
-    // Use same timer for OLED timeout
-    oled_timeout = showRXTime;
+
+    // Read OLED RX Timer
+    if (!preferences.getBool(PREF_DEV_SHOW_OLED_TIME_INIT)){
+      preferences.putBool(PREF_DEV_SHOW_OLED_TIME_INIT, true);
+      preferences.putInt(PREF_DEV_SHOW_OLED_TIME, oled_timeout/1000);
+    }
+    oled_timeout = preferences.getInt(PREF_DEV_SHOW_OLED_TIME) * 1000;
     
     if (!preferences.getBool(PREF_DEV_AUTO_SHUT_PRESET_INIT)){
       preferences.putBool(PREF_DEV_AUTO_SHUT_PRESET_INIT, true);
@@ -839,6 +844,9 @@ void setup(){
   time_to_refresh = millis() + showRXTime;
   displayInvalidGPS();
   digitalWrite(TXLED, HIGH);
+
+  // Hold the OLED ON at first boot
+  oled_timer=millis()+oled_timeout;
 }
 
 void enableOled() {
@@ -875,6 +883,7 @@ void loop() {
   }
 
   if (manBeacon) {
+    // Manually sending beacon from html page
     enableOled();
     writedisplaytext("((WEB TX))","","","","","");
     sendpacket();
@@ -882,7 +891,12 @@ void loop() {
   }
   // Only wake up OLED when necessary, note that DIM is to turn OFF the backlight
   if (enabled_oled) {
-    display.dim(!tempOled);
+    if (oled_timeout>0) {
+      display.dim(!tempOled);
+    } else {
+      // If timeout is 0 keep OLED awake
+      display.dim(false);
+    }
   } 
 
   if (tempOled && millis()>= oled_timer) {
