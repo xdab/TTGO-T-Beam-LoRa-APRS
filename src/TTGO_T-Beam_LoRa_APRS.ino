@@ -511,6 +511,10 @@ String prepareCallsign(const String& callsign){
         char Tcall_message_char[9];
         sprintf_P(Tcall_message_char, "%-9s", Tcall);
         String Tcall_message = String(Tcall_message_char);
+        // Flash the light when telemetry is being sent
+        #ifdef ENABLE_LED_SIGNALING
+          digitalWrite(TXLED, LOW);
+        #endif
 
         // Determine sequence number (or 'MIC')
         // Pad to 3 digits
@@ -534,7 +538,9 @@ String prepareCallsign(const String& callsign){
         writedisplaytext("((TEL TX))","","","","","");
 
         // Flash the light when telemetry is being sent
-        // CODE HERE
+        #ifdef ENABLE_LED_SIGNALING
+          digitalWrite(TXLED, HIGH);
+        #endif
 
         // Update the telemetry sequence number
         if(tel_sequence >= 0 & tel_sequence < 999){
@@ -1136,7 +1142,6 @@ void loop() {
       }
     }
   }
-  //#if (enable_tel == true) && defined(KISS_PROTOCOL)
   #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
     if (nextTelemetryFrame < millis()){
       nextTelemetryFrame = millis() + (tel_interval * 1000);

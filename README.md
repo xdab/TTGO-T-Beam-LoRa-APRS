@@ -43,6 +43,7 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * ((AUT TX)) - information about sending automatic positioning frame when GPS is turned off
 * ((KISSTX)) - information about sending the frame sent by KISS
 * ((WEB TX)) - sending frame as requested via HTTP
+* ((TEL TX)) - information about sending telemetry
 
 ## How to binary first flash readme... (thanx SP6VWX)
 * Download the appropriate binary file for your board from: https://github.com/SQ9MDD/TTGO-T-Beam-LoRa-APRS/releases
