@@ -24,7 +24,9 @@ std::list <tReceivedPacketData*> receivedPackets;
 const int MAX_RECEIVED_LIST_SIZE = 50;
 
 String apSSID = "";
-String apPassword = "xxxxxxxxxx";
+String apPassword;
+String defApPassword = "xxxxxxxxxx";
+
 WebServer server(80);
 #ifdef KISS_PROTOCOL
   WiFiServer tncServer(NETWORK_TNC_PORT);
@@ -134,7 +136,7 @@ void handle_SaveWifiCfg() {
     }
   }
 
-  if (server.arg(PREF_AP_PASSWORD)!="*" && server.arg(PREF_WIFI_PASSWORD).length()>0 && server.arg(PREF_AP_PASSWORD).length()<8){
+  if (server.arg(PREF_AP_PASSWORD)!="*" && server.arg(PREF_AP_PASSWORD).length()<8){
     server.send(403, "text/plain", "AP Password must be minimum 8 character");
   } else {
     if (server.arg(PREF_AP_PASSWORD)!="*") {
@@ -372,6 +374,8 @@ void handle_saveDeviceCfg(){
   if (preferences.getString(PREF_AP_PASSWORD).length() > 8) {
     // 8 characters is requirements for WPA2
     apPassword = preferences.getString(PREF_AP_PASSWORD);
+  } else {
+    apPassword = defApPassword;
   }
   if (!wifi_ssid.length()){
     WiFi.softAP(apSSID.c_str(), apPassword.c_str());
