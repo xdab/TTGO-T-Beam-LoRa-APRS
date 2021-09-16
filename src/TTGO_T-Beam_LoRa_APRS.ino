@@ -104,6 +104,7 @@ boolean t_lock = false;
 boolean fixed_beacon_enabled = false;
 boolean show_cmt = true;
 int tel_interval;
+int tel_sequence;
 
 #ifdef SHOW_ALT
   boolean showAltitude = true;
@@ -499,10 +500,16 @@ String prepareCallsign(const String& callsign){
         sprintf_P(Tcall_message_char, "%-9s", Tcall);
         String Tcall_message = String(Tcall_message_char);
 
+        // Determine sequence number (or 'MIC')
+        // Pad to 3 digits
+        char tel_sequence_char[3];
+        sprintf_P(tel_sequence_char, "%03i", tel_sequence);
+        String tel_sequence_str = String(tel_sequence_char);
+        
         String telemetryParamsNames = String(":") + Tcall_message + ":PARM.B Volt,B In,B Out,AC V,AC C";
         String telemetryUnitNames = String(":") + Tcall_message + ":UNIT.mV,mA,mA,mV,mA";
         String telemetryEquations = String(":") + Tcall_message + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
-        String telemetryData = String("T#") + String(b_volt) + ","+ String(b_in_c) + ","+ String(b_out_c) + ","+ String(ac_volt) + ","+ String(ac_c) + ",00000000";
+        String telemetryData = String("T#") + tel_sequence_str + "," + String(b_volt) + "," + String(b_in_c) + "," + String(b_out_c) + "," + String(ac_volt) + "," + String(ac_c) + ",00000000";
         String telemetryBase = "";
         telemetryBase += Tcall + ">APLO01," + relay_path + ":";
         Serial.print(telemetryBase);
@@ -510,6 +517,19 @@ String prepareCallsign(const String& callsign){
         sendToTNC(telemetryBase + telemetryUnitNames);
         sendToTNC(telemetryBase + telemetryEquations);
         sendToTNC(telemetryBase + telemetryData);
+
+        // Show when telemetry is being sent
+        writedisplaytext("((TEL TX))","","","","","");
+
+        // Flash the light when telemetry is being sent
+        // CODE HERE
+
+        // Update the telemetry sequence number
+        if(tel_sequence >= 0 & tel_sequence < 999){
+          tel_sequence = tel_sequence + 1;
+          } else {
+            tel_sequence = 0;
+          }
     }
     #endif
   }
@@ -532,11 +552,11 @@ void setup(){
     relay_path = "";
   #endif
 
-  //#ifdef TNC_SELF_TELEMETRY_INTERVAL
-  //  tel_interval = TNC_SELF_TELEMETRY_INTERVAL;
-  //#else
-  //  tel_interval = 60;
-  //#endif
+  #ifdef TNC_SELF_TELEMETRY_SEQ
+    tel_sequence = TNC_SELF_TELEMETRY_SEQ;
+  #else
+    tel_sequence = 0;
+  #endif
 
   #ifdef FIXED_BEACON_EN
     fixed_beacon_enabled = true;
@@ -619,6 +639,12 @@ void setup(){
       preferences.putInt(PREF_TNC_SELF_TELEMETRY_INTERVAL, tel_interval);
     }
     tel_interval = preferences.getInt(PREF_TNC_SELF_TELEMETRY_INTERVAL);
+
+    if (!preferences.getBool(PREF_TNC_SELF_TELEMETRY_SEQ_INIT)){
+      preferences.putBool(PREF_TNC_SELF_TELEMETRY_SEQ_INIT, true);
+      preferences.putInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
+    }
+    tel_sequence = preferences.getInt(PREF_TNC_SELF_TELEMETRY_SEQ);
 
     if (!preferences.getBool(PREF_APRS_LATITUDE_PRESET_INIT)){
       preferences.putBool(PREF_APRS_LATITUDE_PRESET_INIT, true);
