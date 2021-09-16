@@ -64,13 +64,14 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * In the left column click on the ANT-shaped icon, choose your board and click on "Upload". COM port should be detected automatically Wait for procedure to finish and keep reading
 
 ## Configuring parameters
-Wait for the board to reboot, connect to "N0CALL AP" WiFi network, password is: xxxxxxxxxx (10 times "x") and point your browser to "192.168.4.1"
+Wait for the board to reboot, connect to "N0CALL AP" WiFi network, password is: xxxxxxxxxx (10 times "x") and point your browser to "192.168.4.1". Hover your mouse to textboxes to get useful hints.
 
 ### WiFi Settings
 you can scan for local SSID or manually type in name and password
 * Scan WiFi: scan for local WiFi networks
 * SSID: name of the AP to connect to
 * Password: password of WiFi AP
+* AUTO AP Password: if configured network is not reachable the AP mode will be enabled, SSID will be your callsign and this will be the password
 
 ###  APRS Settings
 These are main APRS settings such as callsign, SSID and symbol (refer to: http://www.aprs.org/symbols.html). Please remember to turn ON GPS in order to use it as a tracker.

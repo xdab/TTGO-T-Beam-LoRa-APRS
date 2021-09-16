@@ -366,9 +366,9 @@ void batt_read(){
   BattVolts = axp.getBattVoltage()/1000;
   InpVolts = axp.getVbusVoltage()/1000;
 #elif T_BEAM_V0_7
-  BattVolts = ((float)analogRead(35) / 8192.0) * 2.0 * 3.3 * (1100.0 / 1000.0);    // fixed thanks to Luca IU2FRL 
+  BattVolts = (((float)analogRead(35) / 8192.0) * 2.0 * 3.3 * (1100.0 / 1000.0))+0.41;    // fixed thanks to Luca IU2FRL 
 #else
-  BattVolts = analogRead(35)*7.221/4096;    // fixed thanks to Luca IU2FRL 
+  BattVolts = analogRead(35)*7.221/4096;
 #endif
 }
 

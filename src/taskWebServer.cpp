@@ -112,15 +112,26 @@ void handle_ScanWifi() {
 }
 
 void handle_SaveWifiCfg() {
-  if (!server.hasArg(PREF_WIFI_SSID) || !server.hasArg(PREF_WIFI_PASSWORD)){
-    server.send(500, "text/plain", "Invalid request");
+  if (!server.hasArg(PREF_WIFI_SSID) || !server.hasArg(PREF_WIFI_PASSWORD) || !server.hasArg(PREF_AP_PASSWORD)){
+    server.send(500, "text/plain", "Invalid request, make sure all fields are set");
   }
   if (!server.arg(PREF_WIFI_SSID).length()){
-    server.send(403, "text/plain", "Empty SSID or Password");
+    server.send(403, "text/plain", "Empty SSID");
+  }
+  if (server.arg(PREF_WIFI_PASSWORD)!="*" && server.arg(PREF_AP_PASSWORD).length()<8){
+    server.send(403, "text/plain", "WiFi Password must be minimum 8 character");
+  }
+  if (server.arg(PREF_AP_PASSWORD)!="*" && server.arg(PREF_AP_PASSWORD).length()<8){
+    server.send(403, "text/plain", "AP Password must be minimum 8 character");
   }
 
   preferences.putString(PREF_WIFI_SSID, server.arg(PREF_WIFI_SSID));
-  preferences.putString(PREF_WIFI_PASSWORD, server.arg(PREF_WIFI_PASSWORD));
+  if (server.arg(PREF_WIFI_PASSWORD)!="*") {
+    preferences.putString(PREF_WIFI_PASSWORD, server.arg(PREF_WIFI_PASSWORD));
+  }
+  if (server.arg(PREF_AP_PASSWORD)!="*") {
+    preferences.putString(PREF_AP_PASSWORD, server.arg(PREF_AP_PASSWORD));
+  }
 
   server.sendHeader("Location", "/");
   server.send(302,"text/html", "");
@@ -159,6 +170,7 @@ void handle_Restore() {
 void handle_Cfg() {
   String jsonData = "{";
   jsonData += String("\"") + PREF_WIFI_PASSWORD + "\": \"" + jsonEscape((preferences.getString(PREF_WIFI_PASSWORD).isEmpty() ? String("") : "*")) + R"(",)";
+  jsonData += String("\"") + PREF_AP_PASSWORD + "\": \"" + jsonEscape((preferences.getString(PREF_AP_PASSWORD).isEmpty() ? String("") : "*")) + R"(",)";
   jsonData += jsonLineFromPreferenceString(PREF_WIFI_SSID);
   jsonData += jsonLineFromPreferenceDouble(PREF_LORA_FREQ_PRESET);
   jsonData += jsonLineFromPreferenceInt(PREF_LORA_SPEED_PRESET);
@@ -346,6 +358,10 @@ void handle_saveDeviceCfg(){
 
   String wifi_password = preferences.getString(PREF_WIFI_PASSWORD);
   String wifi_ssid = preferences.getString(PREF_WIFI_SSID);
+  if (preferences.getString(PREF_AP_PASSWORD).length() > 8) {
+    // 8 characters is requirements for WPA2
+    apPassword = preferences.getString(PREF_AP_PASSWORD);
+  }
   if (!wifi_ssid.length()){
     WiFi.softAP(apSSID.c_str(), apPassword.c_str());
   } else {
@@ -361,15 +377,24 @@ void handle_saveDeviceCfg(){
       retryWifi += 1;
       if (retryWifi > 60) {
         WiFi.softAP(apSSID.c_str(), apPassword.c_str());
+        //WiFi.softAP(apSSID.c_str(), "password");
         Serial.println("Unable to connect to to wifi. Starting AP");
+        Serial.print("SSID: ");
+        Serial.print(apSSID.c_str());
+        Serial.print(" Password: ");
+        Serial.println(apPassword.c_str());
         break;
       }
     }
 
-    if (WiFi.getMode() == wifi_mode_t::WIFI_MODE_AP){
+    //Serial.print("WiFi Mode: ");
+    //Serial.println(WiFi.getMode());
+    if (WiFi.getMode() == 3){
       Serial.println("Running AP. IP: " + WiFi.softAPIP().toString());
-    } else {
+    } else if (WiFi.getMode() == 1) {
       Serial.println("Connected. IP: " + WiFi.localIP().toString());
+    } else {
+      Serial.println("WiFi Mode: " + WiFi.getMode());
     }
 
     #ifdef ENABLE_SYSLOG
