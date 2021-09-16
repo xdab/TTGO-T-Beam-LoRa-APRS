@@ -115,24 +115,35 @@ void handle_SaveWifiCfg() {
   if (!server.hasArg(PREF_WIFI_SSID) || !server.hasArg(PREF_WIFI_PASSWORD) || !server.hasArg(PREF_AP_PASSWORD)){
     server.send(500, "text/plain", "Invalid request, make sure all fields are set");
   }
+
   if (!server.arg(PREF_WIFI_SSID).length()){
     server.send(403, "text/plain", "Empty SSID");
+  } else {
+    // Update SSID
+    preferences.putString(PREF_WIFI_SSID, server.arg(PREF_WIFI_SSID));
+    Serial.println("Updated SSID: " + server.arg(PREF_WIFI_SSID));
   }
-  if (server.arg(PREF_WIFI_PASSWORD)!="*" && server.arg(PREF_AP_PASSWORD).length()<8){
+
+  if (server.arg(PREF_WIFI_PASSWORD)!="*" && server.arg(PREF_WIFI_PASSWORD).length()>0 && server.arg(PREF_WIFI_PASSWORD).length()<8){
     server.send(403, "text/plain", "WiFi Password must be minimum 8 character");
+  } else {
+    if (server.arg(PREF_WIFI_PASSWORD)!="*") {
+      // Update WiFi password
+      preferences.putString(PREF_WIFI_PASSWORD, server.arg(PREF_WIFI_PASSWORD));
+      Serial.println("Updated WiFi PASS: " + server.arg(PREF_WIFI_PASSWORD));
+    }
   }
-  if (server.arg(PREF_AP_PASSWORD)!="*" && server.arg(PREF_AP_PASSWORD).length()<8){
+
+  if (server.arg(PREF_AP_PASSWORD)!="*" && server.arg(PREF_WIFI_PASSWORD).length()>0 && server.arg(PREF_AP_PASSWORD).length()<8){
     server.send(403, "text/plain", "AP Password must be minimum 8 character");
+  } else {
+    if (server.arg(PREF_AP_PASSWORD)!="*") {
+      // Update AP password
+      preferences.putString(PREF_AP_PASSWORD, server.arg(PREF_AP_PASSWORD));
+      Serial.println("Updated AP PASS: " + server.arg(PREF_AP_PASSWORD));
+    }
   }
-
-  preferences.putString(PREF_WIFI_SSID, server.arg(PREF_WIFI_SSID));
-  if (server.arg(PREF_WIFI_PASSWORD)!="*") {
-    preferences.putString(PREF_WIFI_PASSWORD, server.arg(PREF_WIFI_PASSWORD));
-  }
-  if (server.arg(PREF_AP_PASSWORD)!="*") {
-    preferences.putString(PREF_AP_PASSWORD, server.arg(PREF_AP_PASSWORD));
-  }
-
+  
   server.sendHeader("Location", "/");
   server.send(302,"text/html", "");
 }
