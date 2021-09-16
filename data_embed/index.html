@@ -25,12 +25,16 @@
                         <input type="button" value="Scan WiFi" id="scan_wifi_btn" onclick="scanWifi();">
                     </div>
                     <div>
-                        <label for="wifi_ssid">SSID</label>
-                        <input class="u-full-width" type="text" name="wifi_ssid" placeholder="Your Wifi SSID" id="wifi_ssid">
+                        <label for="wifi_ssid">WiFi SSID</label>
+                        <input class="u-full-width" type="text" name="wifi_ssid" placeholder="Your Wifi SSID" title="Your Wifi SSID" id="wifi_ssid">
                     </div>
                     <div>
-                        <label for="wifi_password">Password</label>
-                        <input class="u-full-width" type="password" name="wifi_password" id="wifi_password">
+                        <label for="wifi_password">WiFi Password</label>
+                        <input class="u-full-width" type="password" name="wifi_password" id="wifi_password" placeholder="Your WiFi Password" title="Your WiFi Password">
+                    </div>
+                    <div>
+                        <label for="ap_password">AUTO AP Password</label>
+                        <input class="u-full-width" type="password" name="ap_password" id="ap_password" placeholder="AUTO AP Password" title="AUTO AP Password">
                     </div>
                 </div>
                 <div class="grid-container full">
@@ -174,8 +178,8 @@
             </div>
             <div class="grid-container quarters">
                 <div>
-                    <label for="oled_enabled">Display dimmer enabled</label>
-                    <input name="oled_enabled" id="oled_enabled" type="checkbox" value="1" title="enable or disable oled dimmer">
+                    <label for="oled_enabled">OLED Display enabled</label>
+                    <input name="oled_enabled" id="oled_enabled" type="checkbox" value="1" title="Enables or disables OLED">
                 </div>                
                 <div>
                     <label for="bt_enabled">Bluetooth enabled</label>
@@ -187,22 +191,23 @@
                 </div>  
                 <div>
                     <label for="shutdown_act">Auto power off</label>
-                    <input name="shutdown_act" id="shutdown_act" type="checkbox" value="1" title="activate auto shutdown after usb plug off">
+                    <input name="shutdown_act" id="shutdown_act" type="checkbox" value="1" title="activate auto shutdown after usb plug off (not for T-BEAM 0.7)">
                 </div>                               
             </div>   
             <div class="grid-container quarters">
                 <div>
-                    <label for="sh_rxtime">Display show RX time (s)</label>
+                    <label for="sh_rxtime">Display show RX time [s]</label>
                     <input name="sh_rxtime" id="sh_rxtime" type="number" min="0" max="45" title="show RX packet for seconds">
                 </div> 
                 <div>
-
+                    <label for="sh_oledtime">Display timeout [s]</label>
+                    <input name="sh_oledtime" id="sh_oledtime" type="number" min="0" max="60" title="Turn OFF OLED after X seconds. Set 0 to disable">
                 </div>
                 <div>
 
                 </div>
                 <div>
-                    <label for="shutdown_dt">Auto power off delay (s)</label>
+                    <label for="shutdown_dt">Auto power off delay [s]</label>
                     <input name="shutdown_dt" id="shutdown_dt" type="number" min="3" max="3600" title="auto shutdown delay in seconds">
                 </div>                               
             </div>                      
@@ -255,6 +260,11 @@
                         <input class="button-primary" type="submit" value="Factory reset">
                     </div>
                 </form>
+                <form action="/beacon" method="post" onsubmit="return confirmAction('send beacon');">
+                    <div>
+                        <input class="button-primary" type="submit" value="Send Beacon">
+                    </div>
+                </form>
             </div>
         </article>
     </section>
@@ -277,7 +287,7 @@
     </section>
 </div>
 <footer>
-    <center><b>Contributors in order of appearance:</b><br> OE1ACM, OE3CJB, SQ9MDD, SQ5RWU, DJ1AN, M0IGA, SQ5WPR, DO2JMG, SP6VWX, SQ2WB</center>
+    <center><b>Contributors in order of appearance:</b><br> OE1ACM, OE3CJB, SQ9MDD, SQ5RWU, DJ1AN, M0IGA, SQ5WPR, DO2JMG, SP6VWX, SQ2WB, IU2FRL, DO3BOX</center>
     <center><b>Latest stable version:</b> <a href=https://github.com/SQ9MDD/TTGO-T-Beam-LoRa-APRS>https://github.com/SQ9MDD/TTGO-T-Beam-LoRa-APRS</a></center>    
     <center><b>Licensed under:</b> CC BY-NC-SA</center>
     <center><!--VERSION--></center>

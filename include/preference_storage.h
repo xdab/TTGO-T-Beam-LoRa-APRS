@@ -3,13 +3,13 @@
 #ifndef PREF_STORAGE
 #define PREF_STORAGE
 
-
 #define ENABLE_PREFERENCES
 extern Preferences preferences;
 
 // MAX 15 chars for preference key!!!
 static const char *const PREF_WIFI_SSID = "wifi_ssid";
 static const char *const PREF_WIFI_PASSWORD = "wifi_password";
+static const char *const PREF_AP_PASSWORD = "ap_password";
 // LoRa settings
 static const char *const PREF_LORA_FREQ_PRESET_INIT = "lora_freq_i";
 static const char *const PREF_LORA_FREQ_PRESET = "lora_freq";
@@ -53,7 +53,7 @@ static const char *const PREF_APRS_SB_MAX_SPEED_PRESET_INIT = "sb_max_speed_i";
 static const char *const PREF_APRS_SB_ANGLE_PRESET = "sb_angle";
 static const char *const PREF_APRS_SB_ANGLE_PRESET_INIT = "sb_angle_i";
 
-//
+// Device settings
 static const char *const PREF_APRS_GPS_EN = "gps_enabled";
 static const char *const PREF_APRS_GPS_EN_INIT = "gps_state_init";
 static const char *const PREF_APRS_SHOW_CMT = "show_cmt";
@@ -68,6 +68,7 @@ static const char *const PREF_DEV_AUTO_SHUT = "shutdown_act";
 static const char *const PREF_DEV_AUTO_SHUT_INIT = "shutdown_actini";
 static const char *const PREF_DEV_AUTO_SHUT_PRESET = "shutdown_dt";
 static const char *const PREF_DEV_AUTO_SHUT_PRESET_INIT = "shutdown_dtini";
-
+static const char *const PREF_DEV_SHOW_OLED_TIME = "sh_oledtime"; // set OLED timeout
+static const char *const PREF_DEV_SHOW_OLED_TIME_INIT = "sh_oledtime_i";
 
 #endif
