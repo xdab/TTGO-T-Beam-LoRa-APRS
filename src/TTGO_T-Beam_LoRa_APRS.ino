@@ -397,11 +397,7 @@ void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3
   display.println(Line4);
   display.setCursor(0,56);
   display.println(Line5);
-  if (enabled_oled){
-    //axp.setPowerOutPut(AXP192_DCDC1, AXP202_ON);                          // enable oled
-    //display.dim(false);
-  }else{
-    //axp.setPowerOutPut(AXP192_DCDC1, AXP202_OFF);                          // disable oled
+  if (!enabled_oled){                         // disable oled
     display.dim(true);
   }   
   display.display();
@@ -412,15 +408,15 @@ String getSatAndBatInfo() {
   String line5;
   if(gps_state == true){
     if(InpVolts > 4){
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V *";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V *";
     }else{
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V";
     }
   }else{
     if(InpVolts > 4){
-      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V *";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V *";
     }else{
-      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V";
     }
     
   }
