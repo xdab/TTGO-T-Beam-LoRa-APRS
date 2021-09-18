@@ -107,7 +107,6 @@ boolean show_cmt = true;
 int tel_interval;
 // Telemetry sequence, current value
 int tel_sequence;
-//int tel_sequence = preferences.getInt(PREF_TNC_SELF_TELEMETRY_SEQ, 0);
 
 #ifdef SHOW_ALT
   boolean showAltitude = true;
@@ -124,11 +123,6 @@ int tel_sequence;
 #else
   boolean enable_tel = false;
 #endif
-//#ifdef TNC_SELF_TELEMETRY_SEQ
-//  int tel_sequence = TNC_SELF_TELEMETRY_SEQ;
-//#else
-//  int tel_sequence = PREF_TNC_SELF_TELEMETRY_SEQ;
-//#endif
 #ifdef ENABLE_BLUETOOTH
   boolean enable_bluetooth = true;
 #else
@@ -552,13 +546,8 @@ String prepareCallsign(const String& callsign){
         #endif
 
         // Update the telemetry sequence number
-        //if(tel_sequence >= 0 & tel_sequence < 999){
-          tel_sequence = tel_sequence + 1;
-          //} 
-          //else {
-          //  tel_sequence = 0;
-          //}
-          preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
+        tel_sequence = tel_sequence + 1;
+        preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
           
     }
     #endif

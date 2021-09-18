@@ -275,9 +275,6 @@ void handle_SaveAPRSCfg() {
   if (server.hasArg(PREF_TNC_SELF_TELEMETRY_INTERVAL)){
     preferences.putInt(PREF_TNC_SELF_TELEMETRY_INTERVAL, server.arg(PREF_TNC_SELF_TELEMETRY_INTERVAL).toInt());
   }
-//Arg(PREF_TNC_SELF_TELEMETRY_SEQ)){
- //   preferences.putInt(PREF_TNC_SELF_TELEMETRY_SEQ, server.arg(PREF_TNC_SELF_TELEMETRY_SEQ).toInt());
-  //}
 
   // Smart Beaconing settings 
   if (server.hasArg(PREF_APRS_FIXED_BEACON_INTERVAL_PRESET)){
