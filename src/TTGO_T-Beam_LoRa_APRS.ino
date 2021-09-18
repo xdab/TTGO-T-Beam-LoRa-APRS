@@ -103,8 +103,11 @@ boolean key_up = true;
 boolean t_lock = false;
 boolean fixed_beacon_enabled = false;
 boolean show_cmt = true;
+// Telemetry interval, seconds
 int tel_interval;
+// Telemetry sequence, current value
 int tel_sequence;
+//int tel_sequence = preferences.getInt(PREF_TNC_SELF_TELEMETRY_SEQ, 0);
 
 #ifdef SHOW_ALT
   boolean showAltitude = true;
@@ -121,6 +124,11 @@ int tel_sequence;
 #else
   boolean enable_tel = false;
 #endif
+//#ifdef TNC_SELF_TELEMETRY_SEQ
+//  int tel_sequence = TNC_SELF_TELEMETRY_SEQ;
+//#else
+//  int tel_sequence = PREF_TNC_SELF_TELEMETRY_SEQ;
+//#endif
 #ifdef ENABLE_BLUETOOTH
   boolean enable_bluetooth = true;
 #else
@@ -517,9 +525,10 @@ String prepareCallsign(const String& callsign){
         #endif
 
         // Determine sequence number (or 'MIC')
+        tel_sequence = preferences.getUInt(PREF_TNC_SELF_TELEMETRY_SEQ, 0);
         // Pad to 3 digits
         char tel_sequence_char[3];
-        sprintf_P(tel_sequence_char, "%03i", tel_sequence);
+        sprintf_P(tel_sequence_char, "%03u", tel_sequence);
         String tel_sequence_str = String(tel_sequence_char);
         
         String telemetryParamsNames = String(":") + Tcall_message + ":PARM.B Volt,B In,B Out,AC V,AC C";
@@ -543,11 +552,14 @@ String prepareCallsign(const String& callsign){
         #endif
 
         // Update the telemetry sequence number
-        if(tel_sequence >= 0 & tel_sequence < 999){
+        //if(tel_sequence >= 0 & tel_sequence < 999){
           tel_sequence = tel_sequence + 1;
-          } else {
-            tel_sequence = 0;
-          }
+          //} 
+          //else {
+          //  tel_sequence = 0;
+          //}
+          preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
+          
     }
     #endif
   }
@@ -576,15 +588,13 @@ void setup(){
     relay_path = "";
   #endif
 
-  #ifdef TNC_SELF_TELEMETRY_SEQ
-    tel_sequence = TNC_SELF_TELEMETRY_SEQ;
-  #else
-    tel_sequence = 0;
-  #endif
-
   #ifdef FIXED_BEACON_EN
     fixed_beacon_enabled = true;
   #endif
+
+// This section loads values from saved preferences,
+// if available. 
+// https://randomnerdtutorials.com/esp32-save-data-permanently-preferences/
 
   #ifdef ENABLE_PREFERENCES
     int clear_preferences = 0;
@@ -1144,6 +1154,7 @@ void loop() {
   }
   #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
     if (nextTelemetryFrame < millis()){
+      // Schedule the next telemetry frame
       nextTelemetryFrame = millis() + (tel_interval * 1000);
       sendTelemetryFrame();
     }

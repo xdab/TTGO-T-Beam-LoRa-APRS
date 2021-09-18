@@ -272,6 +272,12 @@ void handle_SaveAPRSCfg() {
   if (server.hasArg(PREF_APRS_LONGITUDE_PRESET)){
     preferences.putString(PREF_APRS_LONGITUDE_PRESET, server.arg(PREF_APRS_LONGITUDE_PRESET));
   }
+  if (server.hasArg(PREF_TNC_SELF_TELEMETRY_INTERVAL)){
+    preferences.putInt(PREF_TNC_SELF_TELEMETRY_INTERVAL, server.arg(PREF_TNC_SELF_TELEMETRY_INTERVAL).toInt());
+  }
+//Arg(PREF_TNC_SELF_TELEMETRY_SEQ)){
+ //   preferences.putInt(PREF_TNC_SELF_TELEMETRY_SEQ, server.arg(PREF_TNC_SELF_TELEMETRY_SEQ).toInt());
+  //}
 
   // Smart Beaconing settings 
   if (server.hasArg(PREF_APRS_FIXED_BEACON_INTERVAL_PRESET)){
@@ -292,9 +298,7 @@ void handle_SaveAPRSCfg() {
   if (server.hasArg(PREF_APRS_SB_ANGLE_PRESET)){
     preferences.putDouble(PREF_APRS_SB_ANGLE_PRESET, server.arg(PREF_APRS_SB_ANGLE_PRESET).toDouble());
   }
-  if (server.hasArg(PREF_TNC_SELF_TELEMETRY_INTERVAL)){
-    preferences.putInt(PREF_TNC_SELF_TELEMETRY_INTERVAL, server.arg(PREF_TNC_SELF_TELEMETRY_INTERVAL).toInt());
-  }
+  
 
   preferences.putBool(PREF_APRS_SHOW_BATTERY, server.hasArg(PREF_APRS_SHOW_BATTERY));
   preferences.putBool(PREF_ENABLE_TNC_SELF_TELEMETRY, server.hasArg(PREF_ENABLE_TNC_SELF_TELEMETRY));
