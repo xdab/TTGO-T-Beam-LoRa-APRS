@@ -19,6 +19,13 @@ extern const char web_js_js_end[] asm("_binary_data_embed_js_js_out_end");
 // Variable needed to send beacon from html page
 extern bool manBeacon;
 
+// Variable to show AP status
+extern bool apEnabled;
+extern bool apConnected;
+extern String infoApName;
+extern String infoApPass;
+extern String infoApAddr;
+
 QueueHandle_t webListReceivedQueue = nullptr;
 std::list <tReceivedPacketData*> receivedPackets;
 const int MAX_RECEIVED_LIST_SIZE = 50;
@@ -407,8 +414,16 @@ void handle_saveDeviceCfg(){
     //Serial.println(WiFi.getMode());
     if (WiFi.getMode() == 3){
       Serial.println("Running AP. IP: " + WiFi.softAPIP().toString());
+      apEnabled=true;
+      infoApName = apSSID.c_str();
+      infoApPass = apSSID.c_str();
+      infoApAddr = WiFi.softAPIP().toString();
     } else if (WiFi.getMode() == 1) {
       Serial.println("Connected. IP: " + WiFi.localIP().toString());
+      apConnected=true;
+      infoApName = wifi_ssid.c_str();
+      infoApPass = wifi_password.c_str();
+      infoApAddr = WiFi.localIP().toString();
     } else {
       Serial.println("WiFi Mode: " + WiFi.getMode());
     }

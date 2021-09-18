@@ -191,6 +191,13 @@ ulong oled_timer;
 // Variable to manually send beacon from html page
 bool manBeacon = false;
 
+// Variable to show AP settings on OLED
+bool apEnabled = false;
+bool apConnected = false;
+String infoApName = "";
+String infoApPass = "";
+String infoApAddr = "";
+
 #define ANGLE_AVGS 3                  // angle averaging - x times
 float average_course[ANGLE_AVGS];
 float avg_c_y, avg_c_x;
@@ -876,6 +883,17 @@ void loop() {
         key_up = true;
       }
     }
+  }
+
+  // Show informations on WiFi Status
+  if (apConnected) {
+    enableOled(); // turn ON OLED temporary
+    writedisplaytext(" ((WiFi))","WiFi Client Mode","SSID: " + infoApName, "Pass: ********", "IP: " + infoApAddr, getSatAndBatInfo());
+    apConnected=false;
+  } else if (apEnabled) {
+    enableOled(); // turn ON OLED temporary
+    writedisplaytext(" ((WiFi))","WiFi AP Mode","SSID: " + infoApName, "Pass: " + infoApPass, "IP: " + infoApAddr, getSatAndBatInfo());
+    apEnabled=false;
   }
 
   if (manBeacon) {
