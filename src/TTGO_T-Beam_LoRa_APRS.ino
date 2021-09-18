@@ -54,9 +54,17 @@
   #define BUTTON  39                //pin number for Button on TTGO T-Beam
   #define BUZZER 15                 // enter your buzzer pin gpio
   const byte TXLED  = 4;            //pin number for LED on TX Tracker
+/* Original LORA32 V2.1 Setup
 #elif LORA32_21
   #define I2C_SDA 4
   #define I2C_SCL 15
+  #define BUTTON 2                  //pin number for BUTTO
+  #define BUZZER 13                 // enter your buzzer pin gpio
+  const byte TXLED  = 4;            //pin number for LED on TX Tracker
+*/
+#elif LORA32_21                     // Modified as in #47
+  #define I2C_SDA 21
+  #define I2C_SCL 22
   #define BUTTON 2                  //pin number for BUTTO
   #define BUZZER 13                 // enter your buzzer pin gpio
   const byte TXLED  = 4;            //pin number for LED on TX Tracker
@@ -190,6 +198,13 @@ ulong oled_timer;
 
 // Variable to manually send beacon from html page
 bool manBeacon = false;
+
+// Variable to show AP settings on OLED
+bool apEnabled = false;
+bool apConnected = false;
+String infoApName = "";
+String infoApPass = "";
+String infoApAddr = "";
 
 #define ANGLE_AVGS 3                  // angle averaging - x times
 float average_course[ANGLE_AVGS];
@@ -397,11 +412,7 @@ void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3
   display.println(Line4);
   display.setCursor(0,56);
   display.println(Line5);
-  if (enabled_oled){
-    //axp.setPowerOutPut(AXP192_DCDC1, AXP202_ON);                          // enable oled
-    //display.dim(false);
-  }else{
-    //axp.setPowerOutPut(AXP192_DCDC1, AXP202_OFF);                          // disable oled
+  if (!enabled_oled){                         // disable oled
     display.dim(true);
   }   
   display.display();
@@ -412,15 +423,15 @@ String getSatAndBatInfo() {
   String line5;
   if(gps_state == true){
     if(InpVolts > 4){
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V *";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V *";
     }else{
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V";
     }
   }else{
     if(InpVolts > 4){
-      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V *";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V *";
     }else{
-      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V";
     }
     
   }
@@ -880,6 +891,17 @@ void loop() {
         key_up = true;
       }
     }
+  }
+
+  // Show informations on WiFi Status
+  if (apConnected) {
+    enableOled(); // turn ON OLED temporary
+    writedisplaytext(" ((WiFi))","WiFi Client Mode","SSID: " + infoApName, "Pass: ********", "IP: " + infoApAddr, getSatAndBatInfo());
+    apConnected=false;
+  } else if (apEnabled) {
+    enableOled(); // turn ON OLED temporary
+    writedisplaytext(" ((WiFi))","WiFi AP Mode","SSID: " + infoApName, "Pass: " + infoApPass, "IP: " + infoApAddr, getSatAndBatInfo());
+    apEnabled=false;
   }
 
   if (manBeacon) {
