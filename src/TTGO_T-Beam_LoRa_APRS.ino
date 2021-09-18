@@ -123,6 +123,11 @@ int tel_sequence;
 #else
   boolean enable_tel = false;
 #endif
+#ifdef TNC_SELF_TELEMETRY_MIC
+  int tel_mic = 1; // telemetry as "T#MIC"
+#else
+  int tel_mic = 0; // telemetry as "T#001"
+#endif
 #ifdef ENABLE_BLUETOOTH
   boolean enable_bluetooth = true;
 #else
@@ -519,11 +524,17 @@ String prepareCallsign(const String& callsign){
         #endif
 
         // Determine sequence number (or 'MIC')
-        tel_sequence = preferences.getUInt(PREF_TNC_SELF_TELEMETRY_SEQ, 0);
-        // Pad to 3 digits
-        char tel_sequence_char[3];
-        sprintf_P(tel_sequence_char, "%03u", tel_sequence);
-        String tel_sequence_str = String(tel_sequence_char);
+        String tel_sequence_str;
+        if(tel_mic == 1){
+          tel_sequence_str = "MIC";
+        }else{
+          // Get the current saved telemetry sequence
+          tel_sequence = preferences.getUInt(PREF_TNC_SELF_TELEMETRY_SEQ, 0);
+          // Pad to 3 digits
+          char tel_sequence_char[3];
+          sprintf_P(tel_sequence_char, "%03u", tel_sequence);
+          tel_sequence_str = String(tel_sequence_char);
+        }
         
         String telemetryParamsNames = String(":") + Tcall_message + ":PARM.B Volt,B In,B Out,AC V,AC C";
         String telemetryUnitNames = String(":") + Tcall_message + ":UNIT.mV,mA,mA,mV,mA";
@@ -668,6 +679,12 @@ void setup(){
       preferences.putInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
     }
     tel_sequence = preferences.getInt(PREF_TNC_SELF_TELEMETRY_SEQ);
+
+    if (!preferences.getBool(PREF_TNC_SELF_TELEMETRY_MIC_INIT)){
+      preferences.putBool(PREF_TNC_SELF_TELEMETRY_MIC_INIT, true);
+      preferences.putInt(PREF_TNC_SELF_TELEMETRY_MIC, tel_mic);
+    }
+    tel_mic = preferences.getInt(PREF_TNC_SELF_TELEMETRY_MIC);
 
     if (!preferences.getBool(PREF_APRS_LATITUDE_PRESET_INIT)){
       preferences.putBool(PREF_APRS_LATITUDE_PRESET_INIT, true);
