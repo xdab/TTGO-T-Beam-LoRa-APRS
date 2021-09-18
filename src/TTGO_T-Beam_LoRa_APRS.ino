@@ -103,8 +103,6 @@ boolean key_up = true;
 boolean t_lock = false;
 boolean fixed_beacon_enabled = false;
 boolean show_cmt = true;
-// Telemetry interval, seconds
-int tel_interval;
 // Telemetry sequence, current value
 int tel_sequence;
 
@@ -122,6 +120,12 @@ int tel_sequence;
   boolean enable_tel = true;
 #else
   boolean enable_tel = false;
+#endif
+  // Telemetry interval, seconds
+#ifdef TNC_SELF_TELEMETRY_INTERVAL
+  int tel_interval = TNC_SELF_TELEMETRY_INTERVAL;
+#else
+  int tel_interval = 3600;
 #endif
 #ifdef TNC_SELF_TELEMETRY_MIC
   int tel_mic = 1; // telemetry as "T#MIC"
@@ -557,7 +561,11 @@ String prepareCallsign(const String& callsign){
         #endif
 
         // Update the telemetry sequence number
-        tel_sequence = tel_sequence + 1;
+        if(tel_sequence >= 999){
+          tel_sequence = 0;
+        }else{
+          tel_sequence = tel_sequence + 1;
+        }
         preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
           
     }
