@@ -113,6 +113,8 @@ boolean fixed_beacon_enabled = false;
 boolean show_cmt = true;
 // Telemetry sequence, current value
 int tel_sequence;
+// Telemetry path
+String tel_path;
 
 #ifdef SHOW_ALT
   boolean showAltitude = true;
@@ -556,7 +558,7 @@ String prepareCallsign(const String& callsign){
         String telemetryEquations = String(":") + Tcall_message + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
         String telemetryData = String("T#") + tel_sequence_str + "," + String(b_volt) + "," + String(b_in_c) + "," + String(b_out_c) + "," + String(ac_volt) + "," + String(ac_c) + ",00000000";
         String telemetryBase = "";
-        telemetryBase += Tcall + ">APLO01," + relay_path + ":";
+        telemetryBase += Tcall + ">APLO01," + tel_path + ":";
         Serial.print(telemetryBase);
         sendToTNC(telemetryBase + telemetryParamsNames);
         sendToTNC(telemetryBase + telemetryUnitNames);
@@ -705,6 +707,12 @@ void setup(){
     }
     tel_mic = preferences.getInt(PREF_TNC_SELF_TELEMETRY_MIC);
 
+    if (!preferences.getBool(PREF_TNC_SELF_TELEMETRY_PATH_INIT)){
+      preferences.putBool(PREF_TNC_SELF_TELEMETRY_PATH_INIT, true);
+      preferences.putString(PREF_TNC_SELF_TELEMETRY_PATH, tel_path);
+    }
+    tel_path = preferences.getString(PREF_TNC_SELF_TELEMETRY_PATH);
+
     if (!preferences.getBool(PREF_APRS_LATITUDE_PRESET_INIT)){
       preferences.putBool(PREF_APRS_LATITUDE_PRESET_INIT, true);
       preferences.putString(PREF_APRS_LATITUDE_PRESET, LATIDUDE_PRESET);
@@ -722,7 +730,6 @@ void setup(){
       preferences.putBool(PREF_APRS_FIXED_BEACON_PRESET, fixed_beacon_enabled);
     }
     fixed_beacon_enabled = preferences.getBool(PREF_APRS_FIXED_BEACON_PRESET);
-
 
     if (!preferences.getBool(PREF_APRS_FIXED_BEACON_INTERVAL_PRESET_INIT)){
       preferences.putBool(PREF_APRS_FIXED_BEACON_INTERVAL_PRESET_INIT, true);

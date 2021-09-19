@@ -43,6 +43,8 @@ static const char *const PREF_TNC_SELF_TELEMETRY_SEQ = "tnc_tel_seq";
 static const char *const PREF_TNC_SELF_TELEMETRY_SEQ_INIT = "tnc_tel_seq_i";
 static const char *const PREF_TNC_SELF_TELEMETRY_MIC = "tnc_tel_mic";
 static const char *const PREF_TNC_SELF_TELEMETRY_MIC_INIT = "tnc_tel_mic_i";
+static const char *const PREF_TNC_SELF_TELEMETRY_PATH = "tnc_tel_path";
+static const char *const PREF_TNC_SELF_TELEMETRY_PATH_INIT = "tnc_tel_path_i";
 // SMART BEACONING
 static const char *const PREF_APRS_SB_MIN_INTERVAL_PRESET = "sb_min_interv";
 static const char *const PREF_APRS_SB_MIN_INTERVAL_PRESET_INIT = "sb_min_interv_i";
