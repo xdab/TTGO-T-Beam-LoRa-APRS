@@ -111,6 +111,8 @@ boolean key_up = true;
 boolean t_lock = false;
 boolean fixed_beacon_enabled = false;
 boolean show_cmt = true;
+// Telemetry sequence, current value
+int tel_sequence;
 
 #ifdef SHOW_ALT
   boolean showAltitude = true;
@@ -121,6 +123,22 @@ boolean show_cmt = true;
   boolean showBattery = true;
 #else
   boolean showBattery = false;
+#endif
+#ifdef ENABLE_TNC_SELF_TELEMETRY
+  boolean enable_tel = true;
+#else
+  boolean enable_tel = false;
+#endif
+  // Telemetry interval, seconds
+#ifdef TNC_SELF_TELEMETRY_INTERVAL
+  int tel_interval = TNC_SELF_TELEMETRY_INTERVAL;
+#else
+  int tel_interval = 3600;
+#endif
+#ifdef TNC_SELF_TELEMETRY_MIC
+  int tel_mic = 1; // telemetry as "T#MIC"
+#else
+  int tel_mic = 0; // telemetry as "T#001"
 #endif
 #ifdef ENABLE_BLUETOOTH
   boolean enable_bluetooth = true;
@@ -503,27 +521,68 @@ String prepareCallsign(const String& callsign){
 }
 
 #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
-void sendTelemetryFrame() {
-  #ifdef T_BEAM_V1_0
-    uint8_t b_volt = (axp.getBattVoltage() - 3000) / 5.1;
-    uint8_t b_in_c = (axp.getBattChargeCurrent()) / 10;
-    uint8_t b_out_c = (axp.getBattDischargeCurrent()) / 10;
-    uint8_t ac_volt = (axp.getVbusVoltage() - 3000) / 28;
-    uint8_t ac_c = (axp.getVbusCurrent()) / 10;
+  void sendTelemetryFrame() {
+    if(enable_tel == true){
+      #ifdef T_BEAM_V1_0
+        uint8_t b_volt = (axp.getBattVoltage() - 3000) / 5.1;
+        uint8_t b_in_c = (axp.getBattChargeCurrent()) / 10;
+        uint8_t b_out_c = (axp.getBattDischargeCurrent()) / 10;
+        uint8_t ac_volt = (axp.getVbusVoltage() - 3000) / 28;
+        uint8_t ac_c = (axp.getVbusCurrent()) / 10;
+        // Pad telemetry message address to 9 characters
+        char Tcall_message_char[9];
+        sprintf_P(Tcall_message_char, "%-9s", Tcall);
+        String Tcall_message = String(Tcall_message_char);
+        // Flash the light when telemetry is being sent
+        #ifdef ENABLE_LED_SIGNALING
+          digitalWrite(TXLED, LOW);
+        #endif
 
-    String telemetryParamsNames = String(":") + Tcall + ":PARM.B Volt,B In,B Out,AC V,AC C";
-    String telemetryUnitNames = String(":") + Tcall + ":UNIT.mV,mA,mA,mV,mA";
-    String telemetryEquations = String(":") + Tcall + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
-    String telemetryData = String("T#MIC") + String(b_volt) + ","+ String(b_in_c) + ","+ String(b_out_c) + ","+ String(ac_volt) + ","+ String(ac_c) + ",00000000";
-    String telemetryBase = "";
-    telemetryBase += Tcall + ">APLO01" + ":";
-    sendToTNC(telemetryBase + telemetryParamsNames);
-    sendToTNC(telemetryBase + telemetryUnitNames);
-    sendToTNC(telemetryBase + telemetryEquations);
-    sendToTNC(telemetryBase + telemetryData);
+        // Determine sequence number (or 'MIC')
+        String tel_sequence_str;
+        if(tel_mic == 1){
+          tel_sequence_str = "MIC";
+        }else{
+          // Get the current saved telemetry sequence
+          tel_sequence = preferences.getUInt(PREF_TNC_SELF_TELEMETRY_SEQ, 0);
+          // Pad to 3 digits
+          char tel_sequence_char[3];
+          sprintf_P(tel_sequence_char, "%03u", tel_sequence);
+          tel_sequence_str = String(tel_sequence_char);
+        }
+        
+        String telemetryParamsNames = String(":") + Tcall_message + ":PARM.B Volt,B In,B Out,AC V,AC C";
+        String telemetryUnitNames = String(":") + Tcall_message + ":UNIT.mV,mA,mA,mV,mA";
+        String telemetryEquations = String(":") + Tcall_message + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
+        String telemetryData = String("T#") + tel_sequence_str + "," + String(b_volt) + "," + String(b_in_c) + "," + String(b_out_c) + "," + String(ac_volt) + "," + String(ac_c) + ",00000000";
+        String telemetryBase = "";
+        telemetryBase += Tcall + ">APLO01," + relay_path + ":";
+        Serial.print(telemetryBase);
+        sendToTNC(telemetryBase + telemetryParamsNames);
+        sendToTNC(telemetryBase + telemetryUnitNames);
+        sendToTNC(telemetryBase + telemetryEquations);
+        sendToTNC(telemetryBase + telemetryData);
+
+        // Show when telemetry is being sent
+        writedisplaytext("((TEL TX))","","","","","");
+
+        // Flash the light when telemetry is being sent
+        #ifdef ENABLE_LED_SIGNALING
+          digitalWrite(TXLED, HIGH);
+        #endif
+
+        // Update the telemetry sequence number
+        if(tel_sequence >= 999){
+          tel_sequence = 0;
+        }else{
+          tel_sequence = tel_sequence + 1;
+        }
+        preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
+          
+    }
+    #endif
+  }
   #endif
-}
-#endif
 
 // + SETUP --------------------------------------------------------------+//
 void setup(){
@@ -551,6 +610,10 @@ void setup(){
   #ifdef FIXED_BEACON_EN
     fixed_beacon_enabled = true;
   #endif
+
+// This section loads values from saved preferences,
+// if available. 
+// https://randomnerdtutorials.com/esp32-save-data-permanently-preferences/
 
   #ifdef ENABLE_PREFERENCES
     int clear_preferences = 0;
@@ -617,6 +680,30 @@ void setup(){
       preferences.putBool(PREF_APRS_SHOW_BATTERY, showBattery);
     }
     showBattery = preferences.getBool(PREF_APRS_SHOW_BATTERY);
+
+     if (!preferences.getBool(PREF_ENABLE_TNC_SELF_TELEMETRY_INIT)){
+      preferences.putBool(PREF_ENABLE_TNC_SELF_TELEMETRY_INIT, true);
+      preferences.putBool(PREF_ENABLE_TNC_SELF_TELEMETRY, enable_tel);
+    }
+    enable_tel = preferences.getBool(PREF_ENABLE_TNC_SELF_TELEMETRY);
+
+    if (!preferences.getBool(PREF_TNC_SELF_TELEMETRY_INTERVAL_INIT)){
+      preferences.putBool(PREF_TNC_SELF_TELEMETRY_INTERVAL_INIT, true);
+      preferences.putInt(PREF_TNC_SELF_TELEMETRY_INTERVAL, tel_interval);
+    }
+    tel_interval = preferences.getInt(PREF_TNC_SELF_TELEMETRY_INTERVAL);
+
+    if (!preferences.getBool(PREF_TNC_SELF_TELEMETRY_SEQ_INIT)){
+      preferences.putBool(PREF_TNC_SELF_TELEMETRY_SEQ_INIT, true);
+      preferences.putInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
+    }
+    tel_sequence = preferences.getInt(PREF_TNC_SELF_TELEMETRY_SEQ);
+
+    if (!preferences.getBool(PREF_TNC_SELF_TELEMETRY_MIC_INIT)){
+      preferences.putBool(PREF_TNC_SELF_TELEMETRY_MIC_INIT, true);
+      preferences.putInt(PREF_TNC_SELF_TELEMETRY_MIC, tel_mic);
+    }
+    tel_mic = preferences.getInt(PREF_TNC_SELF_TELEMETRY_MIC);
 
     if (!preferences.getBool(PREF_APRS_LATITUDE_PRESET_INIT)){
       preferences.putBool(PREF_APRS_LATITUDE_PRESET_INIT, true);
@@ -1103,7 +1190,8 @@ void loop() {
   }
   #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
     if (nextTelemetryFrame < millis()){
-      nextTelemetryFrame = millis() + TNC_SELF_TELEMETRY_INTERVAL;
+      // Schedule the next telemetry frame
+      nextTelemetryFrame = millis() + (tel_interval * 1000);
       sendTelemetryFrame();
     }
   #endif

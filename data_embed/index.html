@@ -101,6 +101,26 @@
                         <label for="aprs_batt">Show Battery</label>
                         <input name="aprs_batt" id="aprs_batt" type="checkbox" value="1" title=" show battery voltage after personal comment">
                     </div>
+                    </div>
+                    <div class="grid-container full">
+                        <h5 class="u-full-width">Telemetry Settings</h5>
+                    </div>
+                    <div class="grid-container quarters">
+                    <div>
+                        <label for="tnc_tel">Enable Self Telemetry</label>
+                        <input name="tnc_tel" id="tnc_tel" type="checkbox" value="1" title="send self telemetry data">
+                    </div>
+                    <div>
+                        <label for="tnc_tel_int">Self Telemetry Interval [s]</label>
+                        <input name="tnc_tel_int" id="tnc_tel_int" type="number" min="10" title="time between sending telemetry if Enable Self Telemetry option is selected ">
+                    </div>
+                    <div>
+                        <label for="tnc_tel_mic">Self Telemetry Sequence</label>
+                        <select id="tnc_tel_mic" name="tnc_tel_mic" title="self telemetry sequence type (numeric supported by aprs.fi and aprsdirect.com)">
+                            <option value="0">Numeric</option>
+                            <option value="1">MIC</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="grid-container full">
                     <h5 class="u-full-width">Fixed Beaconing Settings</h5>
