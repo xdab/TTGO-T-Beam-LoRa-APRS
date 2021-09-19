@@ -552,13 +552,20 @@ String prepareCallsign(const String& callsign){
           sprintf_P(tel_sequence_char, "%03u", tel_sequence);
           tel_sequence_str = String(tel_sequence_char);
         }
-        
+        // Format telemetry path
+        String tel_path_str;
+        if(tel_path == ""){
+          tel_path_str = tel_path;
+        }else{
+          tel_path_str = "," + tel_path;
+        }
+
         String telemetryParamsNames = String(":") + Tcall_message + ":PARM.B Volt,B In,B Out,AC V,AC C";
         String telemetryUnitNames = String(":") + Tcall_message + ":UNIT.mV,mA,mA,mV,mA";
         String telemetryEquations = String(":") + Tcall_message + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
         String telemetryData = String("T#") + tel_sequence_str + "," + String(b_volt) + "," + String(b_in_c) + "," + String(b_out_c) + "," + String(ac_volt) + "," + String(ac_c) + ",00000000";
         String telemetryBase = "";
-        telemetryBase += Tcall + ">APLO01," + tel_path + ":";
+        telemetryBase += Tcall + ">APLO01" + tel_path_str + ":";
         Serial.print(telemetryBase);
         sendToTNC(telemetryBase + telemetryParamsNames);
         sendToTNC(telemetryBase + telemetryUnitNames);
