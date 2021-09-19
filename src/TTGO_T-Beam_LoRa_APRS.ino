@@ -580,7 +580,7 @@ String prepareCallsign(const String& callsign){
         }
         preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
       #endif
-    }
+    }  
   }
 #endif
 
