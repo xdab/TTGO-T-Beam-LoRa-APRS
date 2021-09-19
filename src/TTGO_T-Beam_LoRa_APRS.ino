@@ -402,6 +402,7 @@ void batt_read(){
   InpVolts = axp.getVbusVoltage()/1000;
 #elif T_BEAM_V0_7
   BattVolts = (((float)analogRead(35) / 8192.0) * 2.0 * 3.3 * (1100.0 / 1000.0))+0.41;    // fixed thanks to Luca IU2FRL 
+  //BattVolts = adc1_get_raw(ADC1_CHANNEL_7)/1000;
 #else
   BattVolts = analogRead(35)*7.221/4096;
 #endif
@@ -443,15 +444,15 @@ String getSatAndBatInfo() {
   String line5;
   if(gps_state == true){
     if(InpVolts > 4){
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V *";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V*";
     }else{
-      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V";
+      line5 = "SAT: " + String(gps.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V";
     }
   }else{
     if(InpVolts > 4){
-      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V *";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V*";
     }else{
-      line5 = "SAT: X  BAT: " + String(BattVolts, 1) + "V";
+      line5 = "SAT: X  BAT: " + String(BattVolts, 2) + "V";
     }
     
   }
@@ -587,19 +588,22 @@ String prepareCallsign(const String& callsign){
           tel_sequence = tel_sequence + 1;
         }
         preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
-          
-    }
-    #endif
+      #endif
+    }  
   }
-  #endif
+#endif
 
 // + SETUP --------------------------------------------------------------+//
 void setup(){
-//#ifdef T_BEAM_V0_7
-//  adcAttachPin(35);
-//  adcStart(35);
-//  analogReadResolution(10);
-//#endif
+#ifdef T_BEAM_V0_7 /*
+  adcAttachPin(35);
+  adcStart(35);
+  analogReadResolution(10);
+  analogSetAttenuation(ADC_6db); */
+  pinMode(35, INPUT);
+  //adc1_config_width(ADC_WIDTH_BIT_12);
+  //adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_11);
+#endif
 
   SPI.begin(SPI_sck,SPI_miso,SPI_mosi,SPI_ss);    //DO2JMG Heltec Patch
   Serial.begin(115200);

@@ -4,6 +4,7 @@
 #include <ESPmDNS.h>
 #include <Update.h>
 #include <BG_RF95.h>
+#include <esp_wifi.h>
 
 #ifndef TASK_WEBSERVER
 #define TASK_WEBSERVER
@@ -23,7 +24,6 @@ typedef struct {
   int RSSI;
   int SNR;
 } tReceivedPacketData;
-
 
 extern QueueHandle_t webListReceivedQueue;
 

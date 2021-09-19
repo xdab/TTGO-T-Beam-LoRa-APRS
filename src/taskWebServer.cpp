@@ -406,6 +406,9 @@ void handle_saveDeviceCfg(){
     int retryWifi = 0;
     WiFi.begin(wifi_ssid.c_str(), wifi_password.length() ? wifi_password.c_str() : nullptr);
     Serial.println("Connecting to " + wifi_ssid);
+    // Set power to minimum (max 20)
+    // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_wifi.html
+    esp_wifi_set_max_tx_power(8);
     while (WiFi.status() != WL_CONNECTED) {
       Serial.print("Not connected: ");
       Serial.println((int)WiFi.status());
@@ -421,6 +424,8 @@ void handle_saveDeviceCfg(){
         Serial.print(apSSID.c_str());
         Serial.print(" Password: ");
         Serial.println(apPassword.c_str());
+        // Set power to minimum (max 20)
+        esp_wifi_set_max_tx_power(8);
         break;
       }
     }
@@ -434,6 +439,9 @@ void handle_saveDeviceCfg(){
       infoApPass = apSSID.c_str();
       infoApAddr = WiFi.softAPIP().toString();
     } else if (WiFi.getMode() == 1) {
+      // Save some battery
+      //WiFi.setSleep(true);
+      esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
       Serial.println("Connected. IP: " + WiFi.localIP().toString());
       apConnected=true;
       infoApName = wifi_ssid.c_str();
