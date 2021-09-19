@@ -43,6 +43,7 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * ((AUT TX)) - information about sending automatic positioning frame when GPS is turned off
 * ((KISSTX)) - information about sending the frame sent by KISS
 * ((WEB TX)) - sending frame as requested via HTTP
+* ((TEL TX)) - information about sending telemetry
 
 ## How to binary first flash readme... (thanx SP6VWX)
 * Download the appropriate binary file for your board from: https://github.com/SQ9MDD/TTGO-T-Beam-LoRa-APRS/releases
@@ -64,7 +65,7 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * In the left column click on the ANT-shaped icon, choose your board and click on "Upload". COM port should be detected automatically Wait for procedure to finish and keep reading
 
 ## Configuring parameters
-Wait for the board to reboot, connect to "N0CALL AP" WiFi network, password is: xxxxxxxxxx (10 times "x") and point your browser to "192.168.4.1". Hover your mouse to textboxes to get useful hints.
+Wait for the board to reboot, connect to "N0CALL AP" WiFi network, password is: xxxxxxxxxx (10 times "x") and point your browser to "http://192.168.4.1" (http, not http*s*). Hover your mouse to textboxes to get useful hints.
 
 ### WiFi Settings
 you can scan for local SSID or manually type in name and password
