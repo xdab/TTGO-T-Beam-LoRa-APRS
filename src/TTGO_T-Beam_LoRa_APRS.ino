@@ -290,7 +290,7 @@ void prepareAPRSFrame(){
     outString += "H";
 
     if (showAltitude){
-      Talt = gps.altitude.meters() * 3.28d;
+      Talt = gps.altitude.meters() * 3.28;
       Altx = Talt;
       outString += "/A=";
       for (i = 0; i < (6 - Altx.length()); ++i){
