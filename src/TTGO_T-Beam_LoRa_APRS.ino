@@ -410,11 +410,16 @@ void batt_read(){
 
 void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3, String Line4, String Line5) {
   batt_read();
-  if (BattVolts < 3.5 && BattVolts > 3.2){
+  if (BattVolts < 3.5 && BattVolts > 3.3){
     #ifdef T_BEAM_V1_0
       # ifdef ENABLE_LED_SIGNALING
       axp.setChgLEDMode(AXP20X_LED_BLINK_4HZ);
       #endif
+    #endif
+  }else if(BattVolts <= 3.3){
+    #ifdef T_BEAM_V1_0
+      axp.setChgLEDMode(AXP20X_LED_OFF);
+      axp.shutdown();
     #endif
   }
   display.clearDisplay();
@@ -1086,6 +1091,7 @@ void loop() {
 
       if(shutdown_countdown_timer_enable){
         if(millis() >= shutdown_countdown_timer){
+          axp.setChgLEDMode(AXP20X_LED_OFF);
           axp.shutdown();
         }
       }
