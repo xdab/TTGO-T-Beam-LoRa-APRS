@@ -173,6 +173,7 @@ void handle_Beacon() {
 void handle_Shutdown() {
   #ifdef T_BEAM_V1_0
     server.send(200,"text/html", "Shutdown");
+    axp.setChgLEDMode(AXP20X_LED_OFF);
     axp.shutdown();
   #else
     server.send(404,"text/html", "Not supported");
