@@ -56,8 +56,8 @@
   const byte TXLED  = 4;            //pin number for LED on TX Tracker
 /* Original LORA32 V2.1 Setup
 #elif LORA32_21
-  #define I2C_SDA 21
-  #define I2C_SCL 22
+  #define I2C_SDA 4
+  #define I2C_SCL 15
   #define BUTTON 2                  //pin number for BUTTO
   #define BUZZER 13                 // enter your buzzer pin gpio
   const byte TXLED  = 4;            //pin number for LED on TX Tracker
