@@ -58,10 +58,14 @@
                         <input name="lora_freq" id="lora_freq" type="number" min="433.000" max="928.000" step="0.001" title="LoRa center frequency between 433.001 and 928.000"> 
                     </div>
                     <div>
-                        <label for="lora_speed">Speed [baud]</label>
+                        <label for="lora_speed">Speed</label>
                         <select id="lora_speed" name="lora_speed">
-                            <option value="300">300 baud</option>
-                            <option value="1200">1200 baud</option>
+                            <option value="300">BW 125khz CR 4:5 SF 12 (default, 300bps)</option>
+                            <option value="240">BW 125khz CR 4:6 SF 12 (244bps)</option>
+                            <option value="210">BW 125khz CR 4:7 SF 12 (209bps)</option>
+                            <option value="180">BW 125khz CR 4:8 SF 12 (183bps)</option>
+                            <option value="610">BW 125khz CR 4:8 SF 10 (610bps)</option>
+                            <option value="1200">BW 125khz CR 4:7 SF 9 (polish, 1200bps)</option>
                         </select>
                     </div>
                 </div>

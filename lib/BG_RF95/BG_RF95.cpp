@@ -21,10 +21,13 @@ PROGMEM static const BG_RF95::ModemConfig MODEM_CONFIG_TABLE[] =
     { 0x72,   0x74,    0x00}, // Bw125Cr45Sf128 (the chip default)
     { 0x92,   0x74,    0x00}, // Bw500Cr45Sf128
     { 0x48,   0x94,    0x00}, // Bw31_25Cr48Sf512
-    { 0x78,   0xc4,    0x00}, // Bw125Cr48Sf4096
-    { 0x72,   0xc7,	   0x8},	// BG 125 cr45 sf12
+    { 0x78,   0xc7,    0x08}, // Bw125Cr48Sf4096
+    { 0x76,   0xc7,    0x08}, // Bw125Cr47Sf4096
+    { 0x74,   0xc7,    0x08}, // Bw125Cr46Sf4096
+    { 0x72,   0xc7,    0x08}, // Bw125Cr45Sf4096
     { 0x72,   0xb4,    0x00}, // Bw125Cr45Sf2048 <= M0IGA messup speed
     { 0x76,   0x94,    0x04}, // Bw125Cr47Sf512 <= corrected 1200baud
+    { 0x78,   0xa4,    0x00}, // Bw125Cr48Sf1024
 };
 
 BG_RF95::BG_RF95(uint8_t slaveSelectPin, uint8_t interruptPin, RHGenericSPI& spi)

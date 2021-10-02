@@ -384,7 +384,19 @@ void loraSend(byte lora_LTXPower, float lora_FREQ, const String &message) {
   if(lora_speed==1200){
     rf95.setModemConfig(BG_RF95::Bw125Cr47Sf512);
   }
-  else{
+  else if(lora_speed==610){
+    rf95.setModemConfig(BG_RF95::Bw125Cr48Sf1024);
+  }
+  else if(lora_speed==180){
+    rf95.setModemConfig(BG_RF95::Bw125Cr48Sf4096);
+  }
+  else if(lora_speed==210){
+    rf95.setModemConfig(BG_RF95::Bw125Cr47Sf4096);
+  }
+  else if(lora_speed==240){
+    rf95.setModemConfig(BG_RF95::Bw125Cr46Sf4096);
+  }
+  else {
     rf95.setModemConfig(BG_RF95::Bw125Cr45Sf4096);
   }
   rf95.setFrequency(lora_FREQ);
@@ -927,10 +939,24 @@ void setup(){
   batt_read();
   writedisplaytext("LoRa-APRS","","Init:","ADC OK!","BAT: "+String(BattVolts,2),"");
   
-  if(lora_speed==1200)
+  if(lora_speed==1200){
     rf95.setModemConfig(BG_RF95::Bw125Cr47Sf512);
-  else
+  }
+  else if(lora_speed==610){
+    rf95.setModemConfig(BG_RF95::Bw125Cr48Sf1024);
+  }
+  else if(lora_speed==180){
+    rf95.setModemConfig(BG_RF95::Bw125Cr48Sf4096);
+  }
+  else if(lora_speed==210){
+    rf95.setModemConfig(BG_RF95::Bw125Cr47Sf4096);
+  }
+  else if(lora_speed==240){
+    rf95.setModemConfig(BG_RF95::Bw125Cr46Sf4096);
+  }
+  else {
     rf95.setModemConfig(BG_RF95::Bw125Cr45Sf4096);
+  }
 
   Serial.printf("LoRa Speed:\t%d\n", lora_speed);
   
