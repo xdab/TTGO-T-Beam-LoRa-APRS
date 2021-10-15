@@ -431,7 +431,7 @@ void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3
   }else if(BattVolts <= 3.3){
     #ifdef T_BEAM_V1_0
       axp.setChgLEDMode(AXP20X_LED_OFF);
-      axp.shutdown();
+      //axp.shutdown(); <-we need fix this 
     #endif
   }
   display.clearDisplay();
