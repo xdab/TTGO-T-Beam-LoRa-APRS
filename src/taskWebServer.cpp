@@ -48,7 +48,10 @@ WiFiServer gpsServer(NETWORK_GPS_PORT);
   Syslog syslog(udpClient, SYSLOG_PROTO_IETF);
 #endif
 
-#ifdef T_BEAM_V1_0
+#ifdef T_BEAM_V1_2
+  #include <XPowersLib.h>
+  extern XPowersAXP2101 PMU;
+#elif T_BEAM_V1_0
   #include <axp20x.h>
   extern AXP20X_Class axp;
 #endif
@@ -171,7 +174,11 @@ void handle_Beacon() {
 }
 
 void handle_Shutdown() {
-  #ifdef T_BEAM_V1_0
+  #ifdef T_BEAM_V1_2
+      server.send(200,"text/html", "Shutdown");
+    PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
+    PMU.shutdown();
+  #elif T_BEAM_V1_0
     server.send(200,"text/html", "Shutdown");
     axp.setChgLEDMode(AXP20X_LED_OFF);
     axp.shutdown();

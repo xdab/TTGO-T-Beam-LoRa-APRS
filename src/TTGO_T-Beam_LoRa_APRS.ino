@@ -24,6 +24,7 @@
 #include "version.h"
 #include "preference_storage.h"
 #include "syslog_log.h"
+#include "XPowersLib.h"
 
 #ifdef KISS_PROTOCOL
   #include "taskTNC.h"
@@ -42,7 +43,14 @@
 #define SPI_ss 18
 
 // IO config
-#ifdef T_BEAM_V1_0
+#ifdef T_BEAM_V1_2
+  #define XPOWERS_CHIP_AXP2101
+  #define I2C_SDA 21
+  #define I2C_SCL 22    
+  #define BUTTON  38                //pin number for Button on TTGO T-Beam
+  #define BUZZER 15                // enter your buzzer pin gpio
+  const byte TXLED  = 4;
+#elif T_BEAM_V1_0
   #define I2C_SDA 21
   #define I2C_SCL 22    
   #define BUTTON  38                //pin number for Button on TTGO T-Beam
@@ -216,7 +224,8 @@ uint oled_timeout = SHOW_OLED_TIME; // OLED Timeout
 bool tempOled = true; // Turn ON OLED at first startup
 ulong oled_timer;
 
-// Variable to manually send beacon from html page
+
+
 bool manBeacon = false;
 
 // Variable to show AP settings on OLED
@@ -240,6 +249,14 @@ static const adc_atten_t atten = ADC_ATTEN_DB_6;
 static const adc_unit_t unit = ADC_UNIT_1;
 #ifdef T_BEAM_V1_0
   AXP20X_Class axp;
+#elif T_BEAM_V1_2 //PMU TBEAM 1.2
+ bool  pmu_flag = 0;
+XPowersAXP2101 PMU;
+
+void setFlag(void)
+{
+    pmu_flag = true;
+}
 #endif
 
 // checkRX
@@ -409,7 +426,10 @@ void loraSend(byte lora_LTXPower, float lora_FREQ, const String &message) {
 }
 
 void batt_read(){
-#ifdef T_BEAM_V1_0
+#ifdef T_BEAM_v1_2
+  BattVolts = PMU.getBattVoltage() / 1000;
+  InpVolts = PMU.getVbusVoltage() / 1000;
+#elif T_BEAM_V1_0
   BattVolts = axp.getBattVoltage()/1000;
   InpVolts = axp.getVbusVoltage()/1000;
 #elif T_BEAM_V0_7
@@ -423,13 +443,21 @@ void batt_read(){
 void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3, String Line4, String Line5) {
   batt_read();
   if (BattVolts < 3.5 && BattVolts > 3.3){
-    #ifdef T_BEAM_V1_0
+    #ifdef T_BEAM_V1_2
+      #ifdef ENABLE_LED_SIGNALING 
+      PMU.setChargingLedMode(XPOWERS_CHG_LED_BLINK_1HZ);
+      #endif
+    #elif T_BEAM_V1_0
       # ifdef ENABLE_LED_SIGNALING
       axp.setChgLEDMode(AXP20X_LED_BLINK_4HZ);
       #endif
     #endif
-  }else if(BattVolts <= 3.3){
-    #ifdef T_BEAM_V1_0
+  }
+  else if(BattVolts <= 3.3){
+    #ifdef T_BEAM_V1_2
+      PMU.setChargingLedMode(XPOWERS_CHG_LED_BLINK_4HZ);
+      //PMU.shutdown();
+    #elif T_BEAM_V1_0
       axp.setChgLEDMode(AXP20X_LED_OFF);
       //axp.shutdown(); <-we need fix this 
     #endif
@@ -543,7 +571,66 @@ String prepareCallsign(const String& callsign){
 #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
   void sendTelemetryFrame() {
     if(enable_tel == true){
-      #ifdef T_BEAM_V1_0
+      #ifdef T_BEAM_V1_2
+        uint8_t b_volt = (PMU.getBattVoltage() - 3000) / 5.1;
+        uint8_t ac_volt = (PMU.getVbusVoltage() - 3000) / 28;
+        // Pad telemetry message address to 9 characters
+        char Tcall_message_char[9];
+        sprintf_P(Tcall_message_char, "%-9s", Tcall);
+        String Tcall_message = String(Tcall_message_char);
+        // Flash the light when telemetry is being sent
+        #ifdef ENABLE_LED_SIGNALING
+          digitalWrite(TXLED, LOW);
+        #endif
+
+        // Determine sequence number (or 'MIC')
+        String tel_sequence_str;
+        if(tel_mic == 1){
+          tel_sequence_str = "MIC";
+        }else{
+          // Get the current saved telemetry sequence
+          tel_sequence = preferences.getUInt(PREF_TNC_SELF_TELEMETRY_SEQ, 0);
+          // Pad to 3 digits
+          char tel_sequence_char[3];
+          sprintf_P(tel_sequence_char, "%03u", tel_sequence);
+          tel_sequence_str = String(tel_sequence_char);
+        }
+        // Format telemetry path
+        String tel_path_str;
+        if(tel_path == ""){
+          tel_path_str = tel_path;
+        }else{
+          tel_path_str = "," + tel_path;
+        }
+
+        String telemetryParamsNames = String(":") + Tcall_message + ":PARM.B Volt,AC V,";
+        String telemetryUnitNames = String(":") + Tcall_message + ":UNIT.mV,mV,";
+        String telemetryEquations = String(":") + Tcall_message + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
+        String telemetryData = String("T#") + tel_sequence_str + "," + String(b_volt) + "," + String(ac_volt) + ",00000000";
+        String telemetryBase = "";
+        telemetryBase += Tcall + ">APLO02" + tel_path_str + ":";
+        Serial.print(telemetryBase);
+        sendToTNC(telemetryBase + telemetryParamsNames);
+        sendToTNC(telemetryBase + telemetryUnitNames);
+        sendToTNC(telemetryBase + telemetryEquations);
+        sendToTNC(telemetryBase + telemetryData);
+
+        // Show when telemetry is being sent
+        writedisplaytext("((TEL TX))","","","","","");
+
+        // Flash the light when telemetry is being sent
+        #ifdef ENABLE_LED_SIGNALING
+          digitalWrite(TXLED, HIGH);
+        #endif
+
+        // Update the telemetry sequence number
+        if(tel_sequence >= 999){
+          tel_sequence = 0;
+        }else{
+          tel_sequence = tel_sequence + 1;
+        }
+        preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
+      #elif T_BEAM_V1_0
         uint8_t b_volt = (axp.getBattVoltage() - 3000) / 5.1;
         uint8_t b_in_c = (axp.getBattChargeCurrent()) / 10;
         uint8_t b_out_c = (axp.getBattDischargeCurrent()) / 10;
@@ -612,7 +699,12 @@ String prepareCallsign(const String& callsign){
 
 // + SETUP --------------------------------------------------------------+//
 void setup(){
-#ifdef T_BEAM_V0_7 /*
+#ifdef T_BEAM_V1_2
+  //PMU.enableBattDetection();
+  PMU.enableVbusVoltageMeasure();
+  PMU.enableBattVoltageMeasure();
+  PMU.enableSystemVoltageMeasure();
+#elif T_BEAM_V0_7 /*
   adcAttachPin(35);
   adcStart(35);
   analogReadResolution(10);
@@ -855,8 +947,10 @@ void setup(){
   }
 
   pinMode(TXLED, OUTPUT);
-  #ifdef T_BEAM_V1_0
+  #ifdef T_BEAM_V1_2
     pinMode(BUTTON, INPUT);
+  #elif T_BEAM_V1_0
+  pinMode(BUTTON, INPUT);
   #elif T_BEAM_V0_7
     pinMode(BUTTON, INPUT);
   #else
@@ -866,7 +960,26 @@ void setup(){
   
   Wire.begin(I2C_SDA, I2C_SCL);
 
-  #ifdef T_BEAM_V1_0
+  #ifdef T_BEAM_V1_2
+    if (! PMU.begin(Wire, AXP2101_SLAVE_ADDRESS, I2C_SDA, I2C_SCL)) {
+    }
+    //axp.setLowTemp(0xFF);                                                 //SP6VWX Set low charging temperature need to convert
+    PMU.setALDO2Voltage(3300);
+    PMU.enableALDO2();                           // LoRa
+    if (gps_state){
+       PMU.enableALDO3();                           // switch on GPS
+    } else {
+       PMU.disableALDO3();                           // switch off GPS
+    }
+    PMU.enableDC2();
+    //axp.setPowerOutPut(AXP192_EXTEN, AXP202_ON); NC
+    PMU.setDC1Voltage(3300);
+    // Enable ADC to measure battery current, USB voltage etc.
+    //axp.adc1Enable(0xfe, true);
+    //axp.adc2Enable(0x80, true);
+    PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
+    PMU.enableDC1();                          // oled do not turn off 
+  #elif T_BEAM_V1_0
     if (!axp.begin(Wire, AXP192_SLAVE_ADDRESS)) {
     }
     axp.setLowTemp(0xFF);                                                 //SP6VWX Set low charging temperature
@@ -1068,7 +1181,9 @@ void loop() {
     t_lock = true;
       if(gps_state){
         gps_state = false;
-        #ifdef T_BEAM_V1_0
+        #ifdef T_BEAM_V1_2
+          PMU.disableALDO3(); //GPS OFF
+        #elif T_BEAM_V1_0
           axp.setPowerOutPut(AXP192_LDO3, AXP202_OFF);                 // GPS OFF
         #endif
         writedisplaytext("((GPSOFF))","","","","","");
@@ -1078,7 +1193,9 @@ void loop() {
         #endif
       }else{
         gps_state = true;
-        #ifdef T_BEAM_V1_0
+        #ifdef T_BEAM_v1_2
+          PMU.enableALDO3(); // GPS ON
+        #elif T_BEAM_V1_0
           axp.setPowerOutPut(AXP192_LDO3, AXP202_ON);
         #endif
         writedisplaytext("((GPS ON))","","","","","");                // GPS ON
@@ -1102,7 +1219,27 @@ void loop() {
     }
   }
 
-  #ifdef T_BEAM_V1_0
+  #ifdef T_BEAM_V1_2
+    if(shutdown_active){
+      if(InpVolts> 4){
+        shutdown_usb_status_bef = true;
+        shutdown_countdown_timer_enable = false;
+      }
+
+      if(InpVolts < 4 && shutdown_usb_status_bef == true){
+        shutdown_usb_status_bef = false;
+        shutdown_countdown_timer_enable = true;
+        shutdown_countdown_timer = millis() + shutdown_delay_time;
+      }
+
+      if(shutdown_countdown_timer_enable){
+        if(millis() >= shutdown_countdown_timer){
+          PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
+          PMU.shutdown();
+        }
+      }
+    }
+  #elif T_BEAM_V1_0
     if(shutdown_active){
       if(InpVolts> 4){
         shutdown_usb_status_bef = true;
@@ -1138,7 +1275,11 @@ void loop() {
   #endif
 
   if (rf95.waitAvailableTimeout(100)) {
-    #ifdef T_BEAM_V1_0
+    #ifdef T_BEAM_V1_2
+      #ifdef ENABLE_LED_SIGNALING
+        PMU.setChargingLedMode(XPOWERS_CHG_LED_ON);
+      #endif    
+    #elif T_BEAM_V1_0
       #ifdef ENABLE_LED_SIGNALING
         axp.setChgLEDMode(AXP20X_LED_LOW_LEVEL);
       #endif
@@ -1167,7 +1308,11 @@ void loop() {
         syslog_log(LOG_INFO, String("Received LoRa: '") + loraReceivedFrameString + "', RSSI:" + rf95.lastRssi() + ", SNR: "  + rf95.lastSNR());
       }
     #endif
-    #ifdef T_BEAM_V1_0
+    #ifdef T_BEAM_V1_2
+      #ifdef ENABLE_LED_SIGNALING
+        PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
+      #endif
+    #elif T_BEAM_V1_0
       #ifdef ENABLE_LED_SIGNALING
         axp.setChgLEDMode(AXP20X_LED_OFF);
       #endif
@@ -1251,7 +1396,15 @@ void loop() {
       if (millis() - last_debug_send_time > 1000*5) {
         last_debug_send_time = millis();
         String debug_message = "";
-        #ifdef T_BEAM_V1_0
+        #ifdef T_BEAM_V1_2
+          debug_message += "Bat V: " + String(PMU.getBattVoltage());
+          debug_message += ", ";
+          debug_message += "USB Plugged: " + String(PMU.isVbusInsertOnSource());
+          debug_message += ", ";
+          debug_message += "USB V: " + String(PMU.getVbusVoltage());
+          debug_message += ", ";
+          debug_message += "Temp C: " + String(PMU.getTemperature());
+        #elif T_BEAM_V1_0
           debug_message += "Bat V: " + String(axp.getBattVoltage());
           debug_message += ", ";
           debug_message += "Bat IN A: " + String(axp.getBattChargeCurrent());

@@ -12,10 +12,12 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * KISS TNC Over Serial or Bluetooth: SQ5RWU
 * Lora32 board support: DJ1AN
 * Self-telemetry improvement: KB1GIM
+* T-beam v1.2 board support: SP6NYA
 
 ## Supported boards
 * TTGO T-beam v.0.7
-* TTGO T-beam v.1.0 
+* TTGO T-beam v.1.0
+* LILYGO/TTGO T-Beam v.1.2
 * Lora32 board
 
 ## User key functions:
@@ -116,3 +118,6 @@ This box allows firmware to be uploaded via OTA
 ## Default WiFi Password:
 * Default WiFi Password is: xxxxxxxxxx
 * that is, 10 times x
+
+## Known bugs
+* T-beam v1.2 batterry voltage issue
