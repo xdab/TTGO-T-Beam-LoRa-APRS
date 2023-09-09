@@ -571,22 +571,6 @@ void displayInvalidGPS() {
   writedisplaytext(" " + Tcall, nextTxInfo, "LAT: not valid", "LON: not valid", "SPD: ---  CRS: ---", getSatAndBatInfo());
 }
 
-//#if defined(KISS_PROTOCOL)
-//**
-// *
-// * @param TNC2FormatedFrame
-// *
-//void sendToTNC(const String& TNC2FormatedFrame) {
-//  if (tncToSendQueue){
-//    auto *buffer = new String();
-//    buffer->concat(TNC2FormatedFrame);
-//    if (xQueueSend(tncReceivedQueue, &buffer, (1000 / portTICK_PERIOD_MS)) != pdPASS){
-//      // remove buffer on error
-//      delete buffer;
-//    }
-//  }
-//}
-//#endif
 #if defined(ENABLE_WIFI)
 /**
  *

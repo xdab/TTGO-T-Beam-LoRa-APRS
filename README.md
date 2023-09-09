@@ -13,7 +13,7 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * Lora32 board support: DJ1AN
 * Self-telemetry improvement: KB1GIM
 * T-beam v1.2 board support: SP6NYA
-* New XPowersLib Library Implementation: SP6NYA
+* New XPowersLib Library: SP6NYA
 
 ## Supported boards
 * TTGO T-beam v.0.7
