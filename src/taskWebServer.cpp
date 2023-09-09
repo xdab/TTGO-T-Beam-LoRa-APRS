@@ -52,8 +52,8 @@ WiFiServer gpsServer(NETWORK_GPS_PORT);
   #include <XPowersLib.h>
   extern XPowersAXP2101 PMU;
 #elif T_BEAM_V1_0
-  #include <axp20x.h>
-  extern AXP20X_Class axp;
+  #include <XPowersLib.h>
+  extern XPowersAXP192 PMU;
 #endif
 
 
@@ -180,8 +180,8 @@ void handle_Shutdown() {
     PMU.shutdown();
   #elif T_BEAM_V1_0
     server.send(200,"text/html", "Shutdown");
-    axp.setChgLEDMode(AXP20X_LED_OFF);
-    axp.shutdown();
+    PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
+    PMU.shutdown();
   #else
     server.send(404,"text/html", "Not supported");
   #endif

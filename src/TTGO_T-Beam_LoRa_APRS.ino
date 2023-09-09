@@ -19,7 +19,6 @@
 #include <Adafruit_SPITFT.h>
 #include <Adafruit_SPITFT_Macros.h>
 #include <gfxfont.h>
-#include <axp20x.h>
 #include "taskGPS.h"
 #include "version.h"
 #include "preference_storage.h"
@@ -51,6 +50,7 @@
   #define BUZZER 15                // enter your buzzer pin gpio
   const byte TXLED  = 4;
 #elif T_BEAM_V1_0
+  #define XPOWERS_CHIP_AXP192
   #define I2C_SDA 21
   #define I2C_SCL 22    
   #define BUTTON  38                //pin number for Button on TTGO T-Beam
@@ -189,6 +189,7 @@ byte  lora_FDeviceError;     //flag, set to 1 if RFM98 device error
 byte  lora_TXPacketL;        //length of packet to send, includes source, destination and packet type.
 
 unsigned long lastTX = 0L;
+float ConvertToV;
 float BattVolts;
 float InpVolts;
 
@@ -248,7 +249,13 @@ uint8_t txPower = TXdbmW;
 static const adc_atten_t atten = ADC_ATTEN_DB_6;
 static const adc_unit_t unit = ADC_UNIT_1;
 #ifdef T_BEAM_V1_0
-  AXP20X_Class axp;
+ bool  pmu_flag = 0;
+XPowersAXP192 PMU;
+
+void setFlag(void)
+{
+    pmu_flag = true;
+}
 #elif T_BEAM_V1_2 //PMU TBEAM 1.2
  bool  pmu_flag = 0;
 XPowersAXP2101 PMU;
@@ -282,6 +289,43 @@ char *ax25_base91enc(char *s, uint8_t n, uint32_t v){
   return(s);
 }
 
+#if defined(KISS_PROTOCOL)
+/**
+ *
+ * @param TNC2FormatedFrame
+ */
+void sendToTNC(const String& TNC2FormatedFrame) {
+  if (tncToSendQueue){
+    auto *buffer = new String();
+    buffer->concat(TNC2FormatedFrame);
+    if (xQueueSend(tncReceivedQueue, &buffer, (1000 / portTICK_PERIOD_MS)) != pdPASS){
+      // remove buffer on error
+      delete buffer;
+    }
+  }
+}
+#endif
+void enablepins(){
+  #ifdef T_BEAM_V1_2
+  PMU.enableBattDetection();
+  PMU.enableVbusVoltageMeasure();
+  PMU.enableBattVoltageMeasure();
+  PMU.enableSystemVoltageMeasure();
+#elif T_BEAM_V1_0
+  PMU.enableBattDetection();
+  PMU.enableVbusVoltageMeasure();
+  PMU.enableBattVoltageMeasure();
+  PMU.enableSystemVoltageMeasure();
+#elif T_BEAM_V0_7 /*
+  adcAttachPin(35);
+  adcStart(35);
+  analogReadResolution(10);
+  analogSetAttenuation(ADC_6db); */
+  pinMode(35, INPUT);
+  //adc1_config_width(ADC_WIDTH_BIT_12);
+  //adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_11);
+#endif
+}
 void prepareAPRSFrame(){
   String helper;
   String Altx;
@@ -374,15 +418,6 @@ void buzzer(int* melody, int array_size){
 }
 #endif
 
-void sendpacket(){
-  #ifdef BUZZER
-    int melody[] = {1000, 50, 800, 100};
-    buzzer(melody, sizeof(melody)/sizeof(int));
-  #endif
-  batt_read();
-  prepareAPRSFrame();
-  loraSend(txPower, lora_freq, outString);  //send the packet, data is in TXbuff from lora_TXStart to lora_TXEnd
-}
 
 /**
  * Send message as APRS LoRa packet
@@ -426,18 +461,30 @@ void loraSend(byte lora_LTXPower, float lora_FREQ, const String &message) {
 }
 
 void batt_read(){
-#ifdef T_BEAM_v1_2
-  BattVolts = PMU.getBattVoltage() / 1000;
-  InpVolts = PMU.getVbusVoltage() / 1000;
+  ConvertToV = 1000;
+#ifdef T_BEAM_V1_2
+  BattVolts = PMU.getBattVoltage()/ConvertToV;
+  InpVolts = PMU.getVbusVoltage()/ConvertToV;
 #elif T_BEAM_V1_0
-  BattVolts = axp.getBattVoltage()/1000;
-  InpVolts = axp.getVbusVoltage()/1000;
+  BattVolts = PMU.getBattVoltage()/ConvertToV;
+  InpVolts = PMU.getVbusVoltage()/ConvertToV;
 #elif T_BEAM_V0_7
   BattVolts = (((float)analogRead(35) / 8192.0) * 2.0 * 3.3 * (1100.0 / 1000.0))+0.41;    // fixed thanks to Luca IU2FRL 
   //BattVolts = adc1_get_raw(ADC1_CHANNEL_7)/1000;
 #else
   BattVolts = analogRead(35)*7.221/4096;
 #endif
+Serial.print(BattVolts);
+}
+
+void sendpacket(){
+  #ifdef BUZZER
+    int melody[] = {1000, 50, 800, 100};
+    buzzer(melody, sizeof(melody)/sizeof(int));
+  #endif
+  batt_read();
+  prepareAPRSFrame();
+  loraSend(txPower, lora_freq, outString);  //send the packet, data is in TXbuff from lora_TXStart to lora_TXEnd
 }
 
 void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3, String Line4, String Line5) {
@@ -449,17 +496,22 @@ void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3
       #endif
     #elif T_BEAM_V1_0
       # ifdef ENABLE_LED_SIGNALING
-      axp.setChgLEDMode(AXP20X_LED_BLINK_4HZ);
+      PMU.setChargingLedMode(XPOWERS_CHG_LED_BLINK_1HZ);
       #endif
     #endif
   }
   else if(BattVolts <= 3.3){
     #ifdef T_BEAM_V1_2
       PMU.setChargingLedMode(XPOWERS_CHG_LED_BLINK_4HZ);
+    #elif T_BEAM_V1_0
+      PMU.setChargingLedMode(XPOWERS_CHG_LED_BLINK_4HZ); 
+    #endif
+  }
+  else if(BattVolts <=3.0){
+    #ifdef T_BEAM_V1_2
       //PMU.shutdown();
     #elif T_BEAM_V1_0
-      axp.setChgLEDMode(AXP20X_LED_OFF);
-      //axp.shutdown(); <-we need fix this 
+      PMU.shutdown();
     #endif
   }
   display.clearDisplay();
@@ -519,22 +571,22 @@ void displayInvalidGPS() {
   writedisplaytext(" " + Tcall, nextTxInfo, "LAT: not valid", "LON: not valid", "SPD: ---  CRS: ---", getSatAndBatInfo());
 }
 
-#if defined(KISS_PROTOCOL)
-/**
- *
- * @param TNC2FormatedFrame
- */
-void sendToTNC(const String& TNC2FormatedFrame) {
-  if (tncToSendQueue){
-    auto *buffer = new String();
-    buffer->concat(TNC2FormatedFrame);
-    if (xQueueSend(tncReceivedQueue, &buffer, (1000 / portTICK_PERIOD_MS)) != pdPASS){
-      // remove buffer on error
-      delete buffer;
-    }
-  }
-}
-#endif
+//#if defined(KISS_PROTOCOL)
+//**
+// *
+// * @param TNC2FormatedFrame
+// *
+//void sendToTNC(const String& TNC2FormatedFrame) {
+//  if (tncToSendQueue){
+//    auto *buffer = new String();
+//    buffer->concat(TNC2FormatedFrame);
+//    if (xQueueSend(tncReceivedQueue, &buffer, (1000 / portTICK_PERIOD_MS)) != pdPASS){
+//      // remove buffer on error
+//      delete buffer;
+//    }
+//  }
+//}
+//#endif
 #if defined(ENABLE_WIFI)
 /**
  *
@@ -631,11 +683,11 @@ String prepareCallsign(const String& callsign){
         }
         preferences.putUInt(PREF_TNC_SELF_TELEMETRY_SEQ, tel_sequence);
       #elif T_BEAM_V1_0
-        uint8_t b_volt = (axp.getBattVoltage() - 3000) / 5.1;
-        uint8_t b_in_c = (axp.getBattChargeCurrent()) / 10;
-        uint8_t b_out_c = (axp.getBattDischargeCurrent()) / 10;
-        uint8_t ac_volt = (axp.getVbusVoltage() - 3000) / 28;
-        uint8_t ac_c = (axp.getVbusCurrent()) / 10;
+        uint8_t b_volt = (PMU.getBattVoltage() - 3000) / 5.1;
+        uint8_t b_in_c = (PMU.getBatteryChargeCurrent()) / 10;
+        uint8_t b_out_c = (PMU.getBattDischargeCurrent()) / 10;
+        uint8_t ac_volt = (PMU.getVbusVoltage() - 3000) / 28;
+        uint8_t ac_c = (PMU.getVbusCurrent()) / 10;
         // Pad telemetry message address to 9 characters
         char Tcall_message_char[9];
         sprintf_P(Tcall_message_char, "%-9s", Tcall);
@@ -699,20 +751,6 @@ String prepareCallsign(const String& callsign){
 
 // + SETUP --------------------------------------------------------------+//
 void setup(){
-#ifdef T_BEAM_V1_2
-  //PMU.enableBattDetection();
-  PMU.enableVbusVoltageMeasure();
-  PMU.enableBattVoltageMeasure();
-  PMU.enableSystemVoltageMeasure();
-#elif T_BEAM_V0_7 /*
-  adcAttachPin(35);
-  adcStart(35);
-  analogReadResolution(10);
-  analogSetAttenuation(ADC_6db); */
-  pinMode(35, INPUT);
-  //adc1_config_width(ADC_WIDTH_BIT_12);
-  //adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_11);
-#endif
 
   SPI.begin(SPI_sck,SPI_miso,SPI_mosi,SPI_ss);    //DO2JMG Heltec Patch
   Serial.begin(115200);
@@ -980,23 +1018,24 @@ void setup(){
     PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
     PMU.enableDC1();                          // oled do not turn off 
   #elif T_BEAM_V1_0
-    if (!axp.begin(Wire, AXP192_SLAVE_ADDRESS)) {
+    if (!PMU.begin(Wire, AXP192_SLAVE_ADDRESS, I2C_SDA, I2C_SCL)) {
     }
-    axp.setLowTemp(0xFF);                                                 //SP6VWX Set low charging temperature
-    axp.setPowerOutPut(AXP192_LDO2, AXP202_ON);                           // LoRa
+    //axp.setLowTemp(0xFF);                                                 //SP6VWX Set low charging temperature need to convert
+    PMU.setLDO2Voltage(3300);
+    PMU.enableLDO2();                           // LoRa
     if (gps_state){
-      axp.setPowerOutPut(AXP192_LDO3, AXP202_ON);                           // switch on GPS
+       PMU.enableLDO3();                           // switch on GPS
     } else {
-      axp.setPowerOutPut(AXP192_LDO3, AXP202_OFF);                           // switch off GPS
+       PMU.disableLDO3();                           // switch off GPS
     }
-    axp.setPowerOutPut(AXP192_DCDC2, AXP202_ON);
-    axp.setPowerOutPut(AXP192_EXTEN, AXP202_ON);
-    axp.setDCDC1Voltage(3300);
+    PMU.enableDC2();
+    //axp.setPowerOutPut(AXP192_EXTEN, AXP202_ON); NC
+    PMU.setDC1Voltage(3300);
     // Enable ADC to measure battery current, USB voltage etc.
-    axp.adc1Enable(0xfe, true);
-    axp.adc2Enable(0x80, true);
-    axp.setChgLEDMode(AXP20X_LED_OFF);
-    axp.setPowerOutPut(AXP192_DCDC1, AXP202_ON);                          // oled do not turn off     
+    //axp.adc1Enable(0xfe, true);
+    //axp.adc2Enable(0x80, true);
+    PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
+    PMU.enableDC1();                           // oled do not turn off     
   #endif
 
   if(!display.begin(SSD1306_SWITCHCAPVCC, SSD1306_ADDRESS)) {
@@ -1184,7 +1223,7 @@ void loop() {
         #ifdef T_BEAM_V1_2
           PMU.disableALDO3(); //GPS OFF
         #elif T_BEAM_V1_0
-          axp.setPowerOutPut(AXP192_LDO3, AXP202_OFF);                 // GPS OFF
+          PMU.disableLDO3();                 // GPS OFF
         #endif
         writedisplaytext("((GPSOFF))","","","","","");
         next_fixed_beacon = millis() + fix_beacon_interval;
@@ -1196,7 +1235,7 @@ void loop() {
         #ifdef T_BEAM_v1_2
           PMU.enableALDO3(); // GPS ON
         #elif T_BEAM_V1_0
-          axp.setPowerOutPut(AXP192_LDO3, AXP202_ON);
+          PMU.enableLDO3();
         #endif
         writedisplaytext("((GPS ON))","","","","","");                // GPS ON
         #ifdef ENABLE_PREFERENCES
@@ -1254,8 +1293,8 @@ void loop() {
 
       if(shutdown_countdown_timer_enable){
         if(millis() >= shutdown_countdown_timer){
-          axp.setChgLEDMode(AXP20X_LED_OFF);
-          axp.shutdown();
+          PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
+          PMU.shutdown();
         }
       }
     }
@@ -1281,7 +1320,7 @@ void loop() {
       #endif    
     #elif T_BEAM_V1_0
       #ifdef ENABLE_LED_SIGNALING
-        axp.setChgLEDMode(AXP20X_LED_LOW_LEVEL);
+        PMU.setChargingLedMode(XPOWERS_CHG_LED_ON);
       #endif
     #endif
     #ifdef BUZZER
@@ -1314,7 +1353,7 @@ void loop() {
       #endif
     #elif T_BEAM_V1_0
       #ifdef ENABLE_LED_SIGNALING
-        axp.setChgLEDMode(AXP20X_LED_OFF);
+         PMU.setChargingLedMode(XPOWERS_CHG_LED_OFF);
       #endif
     #endif
   }
@@ -1405,19 +1444,19 @@ void loop() {
           debug_message += ", ";
           debug_message += "Temp C: " + String(PMU.getTemperature());
         #elif T_BEAM_V1_0
-          debug_message += "Bat V: " + String(axp.getBattVoltage());
+          debug_message += "Bat V: " + String(PMU.getBattVoltage());
           debug_message += ", ";
-          debug_message += "Bat IN A: " + String(axp.getBattChargeCurrent());
+          debug_message += "Bat IN A: " + String(PMU.getBatteryChargeCurrent());
           debug_message += ", ";
-          debug_message += "Bat OUT A: " + String(axp.getBattDischargeCurrent());
+          debug_message += "Bat OUT A: " + String(PMU.getBattDischargeCurrent());
           debug_message += ", ";
-          debug_message += "USB Plugged: " + String(axp.isVBUSPlug());
+          debug_message += "USB Plugged: " + String(PMU.isVBUSin());
           debug_message += ", ";
-          debug_message += "USB V: " + String(axp.getVbusVoltage());
+          debug_message += "USB V: " + String(PMU.getVbusVoltage());
           debug_message += ", ";
-          debug_message += "USB A: " + String(axp.getVbusCurrent());
+          debug_message += "USB A: " + String(PMU.getVbusCurrent());
           debug_message += ", ";
-          debug_message += "Temp C: " + String(axp.getTemp());
+          debug_message += "Temp C: " + String(PMU.getTemperature());
         #else
           debug_message += "Bat V: " + String(BattVolts);
         #endif

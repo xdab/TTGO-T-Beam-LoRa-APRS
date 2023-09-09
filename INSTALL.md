@@ -17,7 +17,7 @@ Search and install the following libaries:<br>
 <li>AXP202X_Library</li>
 <li>OneWire</li>
 <li>DallasTemperature</li>
-<li>XPowersLib<>
+<li>XPowersLib<li>
 </ul>
 <br>
 <h3>2. Command Line Tool</h3>
@@ -31,7 +31,7 @@ platformio lib install "AXP202X_Library"<br>
 platformio lib install "Adafruit Unified Sensor"<br>
 platformio lib install "OneWire"<br>
 platformio lib install "DallasTemperature"<br>
-platformio lib install "XPowersLib<br>
+platformio lib install "XPowersLib'<br>
 <br>
 Check that the platformio.ini is available as it holds the board type for PlatformIO.<br>
 After pressing the check mark the code will be compiled, after pressing the arrow it will be compiled and uploaded to a connected TTGO.<br>
