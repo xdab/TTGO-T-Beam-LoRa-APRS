@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../LoRa aprs"
+		},
+		{
+			"name": "TTGO-T-Beam-LoRa-APRS-master",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.tpp": "cpp"
+		}
+	}
+}

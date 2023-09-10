@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "LoRa aprs",
+			"path": "../LoRa aprs"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.tpp": "cpp"
+		}
+	}
+}

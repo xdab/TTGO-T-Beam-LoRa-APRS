@@ -12,10 +12,13 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * KISS TNC Over Serial or Bluetooth: SQ5RWU
 * Lora32 board support: DJ1AN
 * Self-telemetry improvement: KB1GIM
+* T-beam v1.2 board support: SP6NYA
+* New XPowersLib Library: SP6NYA
 
 ## Supported boards
 * TTGO T-beam v.0.7
-* TTGO T-beam v.1.0 
+* LILYGO/TTGO T-beam v.1.0 - v.1.1
+* LILYGO/TTGO T-Beam v.1.2
 * Lora32 board
 
 ## User key functions:
@@ -45,6 +48,9 @@ After connection with APRX based DIGI it can be used as KISS-TNC
 * ((KISSTX)) - information about sending the frame sent by KISS
 * ((WEB TX)) - sending frame as requested via HTTP
 * ((TEL TX)) - information about sending telemetry
+## LED'S information
+* (Blue) Slow blinking - battery voltage 3.5V-3.3V
+* (Blue) Fast blinking - battery voltage > 3.3V 
 
 ## How to binary first flash readme... (thanx SP6VWX)
 * Download the appropriate binary file for your board from: https://github.com/SQ9MDD/TTGO-T-Beam-LoRa-APRS/releases

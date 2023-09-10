@@ -12,7 +12,9 @@ SFE_UBLOX_GPS myGPS;
 #endif
 
 // Pins for GPS
-#ifdef T_BEAM_V1_0
+#ifdef T_BEAM_V1_2
+  static const int RXPin = 12, TXPin = 34;
+#elif T_BEAM_V1_0
   static const int RXPin = 12, TXPin = 34;
 #else
   static const int RXPin = 15, TXPin = 12;
