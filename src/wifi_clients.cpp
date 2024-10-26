@@ -8,16 +8,22 @@
 
 #include "wifi_clients.h"
 
-void iterateWifiClients(f_connectedClientCallback_t callback, const String *data, WiFiClient * wifiClients[], int maxWifiClients){
-  for (int i=0; i < maxWifiClients; i++) {
+void iterateWifiClients(f_connectedClientCallback_t callback, const String *data, WiFiClient *wifiClients[], int maxWifiClients)
+{
+  for (int i = 0; i < maxWifiClients; i++)
+  {
     auto client = wifiClients[i];
-    if (client != nullptr) {
-      if (client->connected()) {
+    if (client != nullptr)
+    {
+      if (client->connected())
+      {
         callback(client, i, data);
-      } else {
-        #ifdef ENABLE_WIFI_CLIENT_DEBUG
+      }
+      else
+      {
+#ifdef ENABLE_WIFI_CLIENT_DEBUG
         Serial.println(String("Disconnected client ") + client->remoteIP().toString() + ":" + client->remotePort());
-        #endif
+#endif
         delete client;
         wifiClients[i] = nullptr;
       }
@@ -25,37 +31,43 @@ void iterateWifiClients(f_connectedClientCallback_t callback, const String *data
   }
 }
 
-void check_for_new_clients(WiFiServer *wiFiServer, WiFiClient *wifiClients[], int maxWifiClients) {
+void check_for_new_clients(WiFiServer *wiFiServer, WiFiClient *wifiClients[], int maxWifiClients)
+{
   WiFiClient new_client = wiFiServer->available();
-  if (new_client.connected()){
+  if (new_client.connected())
+  {
     bool new_client_handled = false;
-    for (int i=0; i < maxWifiClients; i++) {
+    for (int i = 0; i < maxWifiClients; i++)
+    {
       auto client = wifiClients[i];
-      if (client == nullptr) {
+      if (client == nullptr)
+      {
         client = new WiFiClient(new_client);
         wifiClients[i] = client;
         new_client_handled = true;
-        #ifdef ENABLE_WIFI_CLIENT_DEBUG
-        Serial.println(String("New client #") +String(i) + ": " + client->remoteIP().toString() + ":" + client->remotePort());
-        #endif
+#ifdef ENABLE_WIFI_CLIENT_DEBUG
+        Serial.println(String("New client #") + String(i) + ": " + client->remoteIP().toString() + ":" + client->remotePort());
+#endif
         break;
       }
     }
-    #ifdef ENABLE_WIFI_CLIENT_DEBUG
-    for (int i = 0; i < maxWifiClients; ++i) {
-            auto client = clients[i];
+#ifdef ENABLE_WIFI_CLIENT_DEBUG
+    for (int i = 0; i < maxWifiClients; ++i)
+    {
+      auto client = clients[i];
 
-            if (client != nullptr){
-              Serial.println(String("Client #") +String(i) + ": " + client->remoteIP().toString() + ":" + client->remotePort());
-            }
-          }
-    #endif
+      if (client != nullptr)
+      {
+        Serial.println(String("Client #") + String(i) + ": " + client->remoteIP().toString() + ":" + client->remotePort());
+      }
+    }
+#endif
 
-
-    if (!new_client_handled){
-      #ifdef ENABLE_WIFI_CLIENT_DEBUG
+    if (!new_client_handled)
+    {
+#ifdef ENABLE_WIFI_CLIENT_DEBUG
       Serial.println(String("Refusing client "));
-      #endif
+#endif
       new_client.stop();
     }
   }

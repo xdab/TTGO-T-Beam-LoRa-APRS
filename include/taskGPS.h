@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <TinyGPS++.h>
 
-extern TinyGPSPlus gps;
+extern TinyGPSPlus gpsParser;
 
 [[noreturn]] void taskGPS(void *parameter);
