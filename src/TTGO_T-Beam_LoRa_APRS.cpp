@@ -199,7 +199,7 @@ void setFlag(void)
 uint8_t loraReceivedLength = sizeof(lora_RXBUFF);
 
 // Singleton instance of the radio driver
-BG_RF95 rf95(PIN_NSS, PIN_IO_INT); 
+BG_RF95 rf95(PIN_NSS, PIN_IO_INT);
 
 // initialize OLED display
 Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);
@@ -537,11 +537,11 @@ void displayInvalidGPS()
   char *nextTxInfo;
   if (!gps_state)
   {
-    nextTxInfo = (char *)"(TX) GPS disabled";
+    nextTxInfo = (char *)"TX: GPS disabled";
   }
   else
   {
-    nextTxInfo = (char *)"(TX) at valid GPS";
+    nextTxInfo = (char *)"TX: at valid GPS";
   }
   writedisplaytext(Tcall, nextTxInfo, "LAT: not valid", "LON: not valid", "SPD: ---  CRS: ---", getSatAndBatInfo());
 }
@@ -1534,7 +1534,7 @@ void loop()
         writedisplaytext(Tcall,
                          "TX in: " + String(((lastTX + nextTX) - millis()) / 1000) + " s",
                          "LAT: " + LatShown, "LON: " + LongShown,
-                         "SPD: " + String(gpsParser.speed.kmph()) + "  CRS: " + String(gpsParser.course.deg(), 1), 
+                         "SPD: " + String(gpsParser.speed.kmph()) + "  CRS: " + String(gpsParser.course.deg(), 1),
                          getSatAndBatInfo());
       }
       else
