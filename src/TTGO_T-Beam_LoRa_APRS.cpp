@@ -24,6 +24,7 @@
 #include "XPowersLib.h"
 #include <pins.h>
 #include <gps.h>
+#include <smartbeaconing.h>
 
 // Tasks
 #include "task_gps.h"
@@ -119,23 +120,11 @@ byte lora_TXSource;      // source address of packet received
 byte lora_FDeviceError;  // flag, set to 1 if RFM98 device error
 byte lora_TXPacketL;     // length of packet to send, includes source, destination and packet type.
 
-unsigned long lastTX = 0L;
 float ConvertToV;
 float BattVolts;
 float InpVolts;
 
-// variables for smart beaconing
-ulong sb_min_interval = 60000L;
-ulong sb_max_interval = 360000L;
-float sb_min_speed = 0;
-float sb_max_speed = 30;
-float sb_angle = 30; // angle to send packet at smart beaconing
-
-float average_speed[5] = {0, 0, 0, 0, 0}, average_speed_final = 0;
-float old_course = 0, new_course = 0;
-int point_avg_speed = 0, point_avg_course = 0;
-
-ulong nextTX = 60000L; // preset time period between TX = 60000ms = 60secs = 1min
+SmartBeaconing sb;
 
 ulong time_to_refresh = 0;
 ulong next_fixed_beacon = 0;
@@ -164,10 +153,6 @@ bool apConnected = false;
 String infoApName = "";
 String infoApPass = "";
 String infoApAddr = "";
-
-#define ANGLE_AVGS 3 // angle averaging - x times
-float average_course[ANGLE_AVGS];
-float avg_c_y, avg_c_x;
 
 uint8_t txPower = TXdbmW;
 
@@ -377,7 +362,6 @@ void loraSend(byte lora_LTXPower, float lora_FREQ, const String &message)
 #ifdef ENABLE_LED_SIGNALING
   digitalWrite(TXLED, LOW);
 #endif
-  lastTX = millis();
 
   int messageSize = min(message.length(), sizeof(lora_TXBUFF) - 1);
   message.toCharArray((char *)lora_TXBUFF, messageSize + 1, 0);
@@ -905,38 +889,37 @@ void setup()
   if (!preferences.getBool(PREF_APRS_SB_MIN_INTERVAL_PRESET_INIT))
   {
     preferences.putBool(PREF_APRS_SB_MIN_INTERVAL_PRESET_INIT, true);
-    preferences.putInt(PREF_APRS_SB_MIN_INTERVAL_PRESET, sb_min_interval / 1000);
+    preferences.putUInt(PREF_APRS_SB_MIN_INTERVAL_PRESET, sb.get_min_interval() / 1000);
   }
-  sb_min_interval = preferences.getInt(PREF_APRS_SB_MIN_INTERVAL_PRESET) * 1000;
+  sb.set_min_interval(preferences.getUInt(PREF_APRS_SB_MIN_INTERVAL_PRESET) * 1000);
 
   if (!preferences.getBool(PREF_APRS_SB_MAX_INTERVAL_PRESET_INIT))
   {
     preferences.putBool(PREF_APRS_SB_MAX_INTERVAL_PRESET_INIT, true);
-    preferences.putInt(PREF_APRS_SB_MAX_INTERVAL_PRESET, sb_max_interval / 1000);
+    preferences.putUInt(PREF_APRS_SB_MAX_INTERVAL_PRESET, sb.get_max_interval() / 1000);
   }
-  sb_max_interval = preferences.getInt(PREF_APRS_SB_MAX_INTERVAL_PRESET) * 1000;
+  sb.set_max_interval(preferences.getUInt(PREF_APRS_SB_MAX_INTERVAL_PRESET) * 1000);
 
   if (!preferences.getBool(PREF_APRS_SB_MIN_SPEED_PRESET_INIT))
   {
     preferences.putBool(PREF_APRS_SB_MIN_SPEED_PRESET_INIT, true);
-    preferences.putInt(PREF_APRS_SB_MIN_SPEED_PRESET, sb_min_speed);
+    preferences.putUInt(PREF_APRS_SB_MIN_SPEED_PRESET, sb.get_min_speed());
   }
-  sb_min_speed = preferences.getInt(PREF_APRS_SB_MIN_SPEED_PRESET);
+  sb.set_min_speed(preferences.getUInt(PREF_APRS_SB_MIN_SPEED_PRESET));
 
   if (!preferences.getBool(PREF_APRS_SB_MAX_SPEED_PRESET_INIT))
   {
     preferences.putBool(PREF_APRS_SB_MAX_SPEED_PRESET_INIT, true);
-    preferences.putInt(PREF_APRS_SB_MAX_SPEED_PRESET, sb_max_speed);
+    preferences.putUInt(PREF_APRS_SB_MAX_SPEED_PRESET, sb.get_max_speed());
   }
-  sb_max_speed = preferences.getInt(PREF_APRS_SB_MAX_SPEED_PRESET);
+  sb.set_max_speed(preferences.getUInt(PREF_APRS_SB_MAX_SPEED_PRESET));
 
   if (!preferences.getBool(PREF_APRS_SB_ANGLE_PRESET_INIT))
   {
     preferences.putBool(PREF_APRS_SB_ANGLE_PRESET_INIT, true);
-    preferences.putDouble(PREF_APRS_SB_ANGLE_PRESET, sb_angle);
+    preferences.putFloat(PREF_APRS_SB_ANGLE_PRESET, sb.get_angle());
   }
-  sb_angle = preferences.getDouble(PREF_APRS_SB_ANGLE_PRESET);
-  //
+  sb.set_angle(preferences.getFloat(PREF_APRS_SB_ANGLE_PRESET));
 
   if (!preferences.getBool(PREF_DEV_SHOW_RX_TIME_INIT))
   {
@@ -997,11 +980,6 @@ void setup()
   }
   enabled_oled = preferences.getBool(PREF_DEV_OL_EN);
 #endif
-
-  for (int i = 0; i < ANGLE_AVGS; i++)
-  { // set average_course to "0"
-    average_course[i] = 0;
-  }
 
   pinMode(TXLED, OUTPUT);
 #ifdef T_BEAM_V1_2
@@ -1114,10 +1092,6 @@ void setup()
       ; // Don't proceed, loop forever
   }
 
-  if (sb_max_interval < nextTX)
-  {
-    sb_max_interval = nextTX;
-  }
   writedisplaytext("LoRa-APRS", "", "Init:", "RF95 OK!", "", "");
   writedisplaytext(" " + Tcall, "", "Init:", "Waiting for GPS", "", "");
   xTaskCreate(task_gps, "task_gps", 5000, nullptr, 1, nullptr);
@@ -1442,72 +1416,18 @@ void loop()
 #endif
   }
 
-  LatShown = String(gps.latitude(), 5);
-  LongShown = String(gps.longitude(), 5);
-  average_speed[point_avg_speed] = gps.speed_kmph(); // calculate smart beaconing
-  ++point_avg_speed;
-  if (point_avg_speed > 4)
-  {
-    point_avg_speed = 0;
-  }
-  average_speed_final = (average_speed[0] + average_speed[1] + average_speed[2] + average_speed[3] + average_speed[4]) / 5;
-  nextTX = (sb_max_interval - sb_min_interval) / (sb_max_speed - sb_min_speed) * (sb_max_speed - average_speed_final) + sb_min_interval;
-  if (nextTX < sb_min_interval)
-  {
-    nextTX = sb_min_interval;
-  }
-  if (nextTX > sb_max_interval)
-  {
-    nextTX = sb_max_interval;
-  }
-  average_course[point_avg_course] = gps.course(); // calculate smart beaconing course
-  ++point_avg_course;
-  if (point_avg_course > (ANGLE_AVGS - 1))
-  {
-    point_avg_course = 0;
-    avg_c_y = 0;
-    avg_c_x = 0;
-    for (int i = 0; i < ANGLE_AVGS; i++)
-    {
-      avg_c_y += sin(average_course[i] / 180 * 3.1415);
-      avg_c_x += cos(average_course[i] / 180 * 3.1415);
-    }
-    new_course = atan2f(avg_c_y, avg_c_x) * 180 / 3.1415;
-    if (new_course < 0)
-    {
-      new_course = 360 + new_course;
-    }
-    if ((old_course < sb_angle) && (new_course > (360 - sb_angle)))
-    {
-      if (abs(new_course - old_course - 360) >= sb_angle)
-      {
-        nextTX = 1; // give one second for turn to finish and then TX
-      }
-    }
-    else
-    {
-      if ((old_course > (360 - sb_angle)) && (new_course < sb_angle))
-      {
-        if (abs(new_course - old_course + 360) >= sb_angle)
-        {
-          nextTX = 1;
-        }
-      }
-      else
-      {
-        if (abs(new_course - old_course) >= sb_angle)
-        {
-          nextTX = 1;
-        }
-      }
-    }
-    old_course = new_course;
-  }
-  if ((millis() < sb_max_interval) && (lastTX == 0))
-  {
-    nextTX = 0;
-  }
-  if ((lastTX + nextTX) <= millis())
+  double latitude = gps.latitude();
+  double longitude = gps.longitude();
+  double speed_kmph = gps.speed_kmph();
+  double course = gps.course();
+
+  uint64_t tx_time = sb.update_pos(latitude, longitude, speed_kmph, course);
+  uint64_t current_time = millis();
+
+  LatShown = String(latitude, 5);
+  LongShown = String(longitude, 5);
+
+  if (tx_time <= current_time)
   {
     if (gps.fix_age() < 2000)
     {
@@ -1517,10 +1437,11 @@ void loop()
                        "SPD: " + String(gps.speed_kmph(), 1) + "  CRS: " + String(gps.course(), 1),
                        getSatAndBatInfo());
       sendpacket();
+      sb.update_tx();
     }
     else
     {
-      if (millis() > time_to_refresh)
+      if (current_time > time_to_refresh)
       {
         displayInvalidGPS();
       }
@@ -1528,12 +1449,14 @@ void loop()
   }
   else
   {
-    if (millis() > time_to_refresh)
+    if (current_time > time_to_refresh)
     {
       if (gps.fix_age() < 2000)
       {
+        uint64_t time_to_tx = tx_time - current_time;
+        time_to_tx /= 1000;
         writedisplaytext(Tcall,
-                         "TX in: " + String(((lastTX + nextTX) - millis()) / 1000) + " s",
+                         "TX in: " + String((long) time_to_tx) + " s",
                          "LAT: " + LatShown, "LON: " + LongShown,
                          "SPD: " + String(gps.speed_kmph()) + "  CRS: " + String(gps.course(), 1),
                          getSatAndBatInfo());
