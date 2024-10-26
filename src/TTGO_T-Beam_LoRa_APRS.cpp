@@ -4,8 +4,7 @@
 // TTGO T-Beam v1.0 only
 //
 // licensed under CC BY-NC-SA
-// Includes
-// #include <TTGO_T-Beam_LoRa_APRS_config.h> // to config user parameters
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <BG_RF95.h> // library from OE1ACM
@@ -19,13 +18,15 @@
 #include <Adafruit_SPITFT.h>
 #include <Adafruit_SPITFT_Macros.h>
 #include <gfxfont.h>
-#include "taskGPS.h"
 #include "version.h"
 #include "preference_storage.h"
 #include "syslog_log.h"
 #include "XPowersLib.h"
 #include <pins.h>
+#include <gps.h>
 
+// Tasks
+#include "task_gps.h"
 #ifdef KISS_PROTOCOL
 #include "taskTNC.h"
 #endif
@@ -45,7 +46,6 @@ String relay_path;
 String aprsComment = MY_COMMENT;
 String aprsLatPreset = LATIDUDE_PRESET;
 String aprsLonPreset = LONGITUDE_PRESET;
-boolean gps_state = true;
 boolean key_up = true;
 boolean t_lock = false;
 boolean fixed_beacon_enabled = false;
@@ -270,10 +270,10 @@ void prepareAPRSFrame()
   uint32_t aprs_lat, aprs_lon;
   int i;
   int Talt;
-  Tlat = gpsParser.location.lat();
-  Tlon = gpsParser.location.lng();
-  Tcourse = gpsParser.course.deg();
-  Tspeed = gpsParser.speed.knots();
+  Tlat = gps.latitude();
+  Tlon = gps.longitude();
+  Tcourse = gps.course();
+  Tspeed = gps.speed_knots();
   aprs_lat = 900000000 - Tlat * 10000000;
   aprs_lat = aprs_lat / 26 - aprs_lat / 2710 + aprs_lat / 15384615;
   aprs_lon = 900000000 + Tlon * 10000000 / 2;
@@ -290,7 +290,7 @@ void prepareAPRSFrame()
     outString += ">APRS," + relay_path + ":!";
   }
 
-  if (gps_state && gpsParser.location.isValid())
+  if (gps.fixed())
   {
     outString += aprsSymbolTable;
     ax25_base91enc(helper_base91, 4, aprs_lat);
@@ -312,7 +312,7 @@ void prepareAPRSFrame()
 
     if (showAltitude)
     {
-      Talt = gpsParser.altitude.meters() * 3.28;
+      Talt = gps.altitude_meters() * 3.28;
       Altx = Talt;
       outString += "/A=";
       for (i = 0; i < (6 - Altx.length()); ++i)
@@ -501,15 +501,15 @@ void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3
 String getSatAndBatInfo()
 {
   String line5;
-  if (gps_state == true)
+  if (gps.enabled())
   {
     if (InpVolts > 4)
     {
-      line5 = "SAT: " + String(gpsParser.satellites.value()) + "  BAT: " + String(BattVolts, 1) + "V*";
+      line5 = "SAT: " + String(gps.satellites()) + "  BAT: " + String(BattVolts, 1) + "V*";
     }
     else
     {
-      line5 = "SAT: " + String(gpsParser.satellites.value()) + "  BAT: " + String(BattVolts, 2) + "V";
+      line5 = "SAT: " + String(gps.satellites()) + "  BAT: " + String(BattVolts, 2) + "V";
     }
   }
   else
@@ -535,7 +535,7 @@ String getSatAndBatInfo()
 void displayInvalidGPS()
 {
   char *nextTxInfo;
-  if (!gps_state)
+  if (!gps.enabled())
   {
     nextTxInfo = (char *)"TX: GPS disabled";
   }
@@ -826,9 +826,9 @@ void setup()
   if (!preferences.getBool(PREF_APRS_GPS_EN_INIT))
   {
     preferences.putBool(PREF_APRS_GPS_EN_INIT, true);
-    preferences.putBool(PREF_APRS_GPS_EN, gps_state);
+    preferences.putBool(PREF_APRS_GPS_EN, gps.enabled());
   }
-  gps_state = preferences.getBool(PREF_APRS_GPS_EN);
+  gps.set_state(preferences.getBool(PREF_APRS_GPS_EN));
 
   if (!preferences.getBool(PREF_APRS_SHOW_BATTERY_INIT))
   {
@@ -1024,7 +1024,8 @@ void setup()
   // axp.setLowTemp(0xFF);                                                 //SP6VWX Set low charging temperature need to convert
   PMU.setALDO2Voltage(3300);
   PMU.enableALDO2(); // LoRa
-  if (gps_state)
+  gps.set_state(gps.enabled());
+  if (gps.enabled())
   {
     PMU.enableALDO3(); // switch on GPS
   }
@@ -1047,7 +1048,7 @@ void setup()
   // axp.setLowTemp(0xFF);                                                 //SP6VWX Set low charging temperature need to convert
   PMU.setLDO2Voltage(3300);
   PMU.enableLDO2(); // LoRa
-  if (gps_state)
+  if (gps.enabled())
   {
     PMU.enableLDO3(); // switch on GPS
   }
@@ -1119,7 +1120,7 @@ void setup()
   }
   writedisplaytext("LoRa-APRS", "", "Init:", "RF95 OK!", "", "");
   writedisplaytext(" " + Tcall, "", "Init:", "Waiting for GPS", "", "");
-  xTaskCreate(taskGPS, "taskGPS", 5000, nullptr, 1, nullptr);
+  xTaskCreate(task_gps, "task_gps", 5000, nullptr, 1, nullptr);
   writedisplaytext(" " + Tcall, "", "Init:", "GPS Task Created!", "", "");
 #ifndef T_BEAM_V1_0
   adc1_config_width(ADC_WIDTH_BIT_12);
@@ -1152,13 +1153,10 @@ void setup()
   {
     rf95.setModemConfig(BG_RF95::Bw125Cr45Sf4096);
   }
-
-  Serial.printf("LoRa Speed:\t%d\n", lora_speed);
-
   rf95.setFrequency(lora_freq);
-  Serial.printf("LoRa FREQ:\t%f\n", lora_freq);
   rf95.setTxPower(txPower);
   delay(250);
+
 #ifdef KISS_PROTOCOL
   xTaskCreatePinnedToCore(taskTNC, "taskTNC", 10000, nullptr, 1, nullptr, xPortGetCoreID());
 #endif
@@ -1220,7 +1218,7 @@ void loop()
         }
         else
         {
-          if (gps_state == true && gpsParser.location.isValid())
+          if (gps.fixed())
           {
             writedisplaytext("MAN TX", "", "", "", "", "");
             sendpacket();
@@ -1283,9 +1281,9 @@ void loop()
     enableOled();
     //---------------
     t_lock = true;
-    if (gps_state)
+    if (gps.enabled())
     {
-      gps_state = false;
+      gps.set_state(false);
 #ifdef T_BEAM_V1_2
       PMU.disableALDO3(); // GPS OFF
 #elif T_BEAM_V1_0
@@ -1299,7 +1297,7 @@ void loop()
     }
     else
     {
-      gps_state = true;
+      gps.set_state(true);
 #ifdef T_BEAM_v1_2
       PMU.enableALDO3(); // GPS ON
 #elif T_BEAM_V1_0
@@ -1320,7 +1318,7 @@ void loop()
 
   if (fixed_beacon_enabled)
   {
-    if (millis() >= next_fixed_beacon && !gps_state)
+    if (millis() >= next_fixed_beacon && !gps.enabled())
     {
       enableOled(); // enable OLED
       next_fixed_beacon = millis() + fix_beacon_interval;
@@ -1444,9 +1442,9 @@ void loop()
 #endif
   }
 
-  LatShown = String(gpsParser.location.lat(), 5);
-  LongShown = String(gpsParser.location.lng(), 5);
-  average_speed[point_avg_speed] = gpsParser.speed.kmph(); // calculate smart beaconing
+  LatShown = String(gps.latitude(), 5);
+  LongShown = String(gps.longitude(), 5);
+  average_speed[point_avg_speed] = gps.speed_kmph(); // calculate smart beaconing
   ++point_avg_speed;
   if (point_avg_speed > 4)
   {
@@ -1462,7 +1460,7 @@ void loop()
   {
     nextTX = sb_max_interval;
   }
-  average_course[point_avg_course] = gpsParser.course.deg(); // calculate smart beaconing course
+  average_course[point_avg_course] = gps.course(); // calculate smart beaconing course
   ++point_avg_course;
   if (point_avg_course > (ANGLE_AVGS - 1))
   {
@@ -1511,10 +1509,13 @@ void loop()
   }
   if ((lastTX + nextTX) <= millis())
   {
-    if (gpsParser.location.age() < 2000)
+    if (gps.fix_age() < 2000)
     {
       enableOled(); // enable OLED
-      writedisplaytext("TX GPS", "", "LAT: " + LatShown, "LON: " + LongShown, "SPD: " + String(gpsParser.speed.kmph(), 1) + "  CRS: " + String(gpsParser.course.deg(), 1), getSatAndBatInfo());
+      writedisplaytext("TX GPS", "",
+                       "LAT: " + LatShown, "LON: " + LongShown,
+                       "SPD: " + String(gps.speed_kmph(), 1) + "  CRS: " + String(gps.course(), 1),
+                       getSatAndBatInfo());
       sendpacket();
     }
     else
@@ -1529,12 +1530,12 @@ void loop()
   {
     if (millis() > time_to_refresh)
     {
-      if (gpsParser.location.age() < 2000)
+      if (gps.fix_age() < 2000)
       {
         writedisplaytext(Tcall,
                          "TX in: " + String(((lastTX + nextTX) - millis()) / 1000) + " s",
                          "LAT: " + LatShown, "LON: " + LongShown,
-                         "SPD: " + String(gpsParser.speed.kmph()) + "  CRS: " + String(gpsParser.course.deg(), 1),
+                         "SPD: " + String(gps.speed_kmph()) + "  CRS: " + String(gps.course(), 1),
                          getSatAndBatInfo());
       }
       else
