@@ -8,7 +8,6 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <BG_RF95.h> // library from OE1ACM
-#include <math.h>
 #include <driver/adc.h>
 #include <Wire.h>
 #include <Adafruit_I2CDevice.h>
@@ -22,9 +21,11 @@
 #include "preference_storage.h"
 #include "syslog_log.h"
 #include "XPowersLib.h"
+
 #include <pins.h>
 #include <gps.h>
 #include <smartbeaconing.h>
+#include <aprs.h>
 
 // Tasks
 #include "task_gps.h"
@@ -40,27 +41,17 @@ ulong lora_speed = 1200;
 double lora_freq = 434.855;
 
 // Variables for APRS packaging
-String Tcall; // your Call Sign for normal position reports
-String aprsSymbolTable = APRS_SYMBOL_TABLE;
-String aprsSymbol = APRS_SYMBOL;
-String relay_path;
-String aprsComment = MY_COMMENT;
-String aprsLatPreset = LATIDUDE_PRESET;
-String aprsLonPreset = LONGITUDE_PRESET;
+String callsign;
+
 boolean key_up = true;
 boolean t_lock = false;
 boolean fixed_beacon_enabled = false;
-boolean show_cmt = true;
+
 // Telemetry sequence, current value
 int tel_sequence;
 // Telemetry path
 String tel_path;
 
-#ifdef SHOW_ALT
-boolean showAltitude = true;
-#else
-boolean showAltitude = false;
-#endif
 #ifdef SHOW_BATT
 boolean showBattery = true;
 #else
@@ -95,12 +86,8 @@ boolean enabled_oled = false;
 
 // Variables and Constants
 String loraReceivedFrameString = ""; // data on buff is copied to this string
-String Outputstring = "";
-String outString = ""; // The new Output String with GPS Conversion RAW
 String LongShown = "";
 String LatShown = "";
-String LongFixed = "";
-String LatFixed = "";
 
 #if defined(ENABLE_TNC_SELF_TELEMETRY) && defined(KISS_PROTOCOL)
 time_t nextTelemetryFrame;
@@ -125,6 +112,7 @@ float BattVolts;
 float InpVolts;
 
 SmartBeaconing sb;
+APRSPositionReportFactory aprs_pos_report_factory(&gps);
 
 ulong time_to_refresh = 0;
 ulong next_fixed_beacon = 0;
@@ -191,24 +179,12 @@ Adafruit_SSD1306 display(128, 64, &Wire, OLED_RESET);
 
 // + FUNCTIONS-----------------------------------------------------------+//
 
-char *ax25_base91enc(char *s, uint8_t n, uint32_t v)
-{
-  /* Creates a Base-91 representation of the value in v in the string */
-  /* pointed to by s, n-characters long. String length should be n+1. */
-  for (s += n, *s = '\0'; n; n--)
-  {
-    *(--s) = v % 91 + 33;
-    v /= 91;
-  }
-  return (s);
-}
-
 #if defined(KISS_PROTOCOL)
 /**
  *
  * @param TNC2FormatedFrame
  */
-void sendToTNC(const String &TNC2FormatedFrame)
+void send_on_tnc(const String &TNC2FormatedFrame)
 {
   if (tncToSendQueue)
   {
@@ -222,6 +198,7 @@ void sendToTNC(const String &TNC2FormatedFrame)
   }
 }
 #endif
+
 void enablepins()
 {
 #ifdef T_BEAM_V1_2
@@ -242,93 +219,6 @@ void enablepins()
   pinMode(35, INPUT);
   // adc1_config_width(ADC_WIDTH_BIT_12);
   // adc1_config_channel_atten(ADC1_CHANNEL_7,ADC_ATTEN_DB_11);
-#endif
-}
-void prepareAPRSFrame()
-{
-  String helper;
-  String Altx;
-  String Speedx, Coursex;
-  char helper_base91[] = {"0000\0"};
-  double Tlat = 52.0000, Tlon = 20.0000;
-  double Tspeed = 0, Tcourse = 0;
-  uint32_t aprs_lat, aprs_lon;
-  int i;
-  int Talt;
-  Tlat = gps.latitude();
-  Tlon = gps.longitude();
-  Tcourse = gps.course();
-  Tspeed = gps.speed_knots();
-  aprs_lat = 900000000 - Tlat * 10000000;
-  aprs_lat = aprs_lat / 26 - aprs_lat / 2710 + aprs_lat / 15384615;
-  aprs_lon = 900000000 + Tlon * 10000000 / 2;
-  aprs_lon = aprs_lon / 26 - aprs_lon / 2710 + aprs_lon / 15384615;
-  outString = "";
-  outString += Tcall;
-
-  if (relay_path.isEmpty())
-  {
-    outString += ">APRS:!";
-  }
-  else
-  {
-    outString += ">APRS," + relay_path + ":!";
-  }
-
-  if (gps.fixed())
-  {
-    outString += aprsSymbolTable;
-    ax25_base91enc(helper_base91, 4, aprs_lat);
-    for (i = 0; i < 4; i++)
-    {
-      outString += helper_base91[i];
-    }
-    ax25_base91enc(helper_base91, 4, aprs_lon);
-    for (i = 0; i < 4; i++)
-    {
-      outString += helper_base91[i];
-    }
-    outString += aprsSymbol;
-    ax25_base91enc(helper_base91, 1, (uint32_t)Tcourse / 4);
-    outString += helper_base91[0];
-    ax25_base91enc(helper_base91, 1, (uint32_t)(log1p(Tspeed) / 0.07696));
-    outString += helper_base91[0];
-    outString += "H";
-
-    if (showAltitude)
-    {
-      Talt = gps.altitude_meters() * 3.28;
-      Altx = Talt;
-      outString += "/A=";
-      for (i = 0; i < (6 - Altx.length()); ++i)
-      {
-        outString += "0";
-      }
-      outString += Talt;
-    }
-  }
-  else
-  { // fixed position not compresed
-    outString += aprsLatPreset;
-    outString += aprsSymbolTable;
-    outString += aprsLonPreset;
-    outString += aprsSymbol;
-  }
-
-  if (show_cmt)
-  {
-    outString += aprsComment;
-  }
-
-  if (showBattery)
-  {
-    outString += " ";
-    outString += String(BattVolts, 2);
-    outString += ("V");
-  }
-
-#ifdef KISS_PROTOCOL
-  sendToTNC(outString);
 #endif
 }
 
@@ -357,41 +247,38 @@ void buzzer(int *melody, int array_size)
  * @param lora_FREQ
  * @param message
  */
-void loraSend(byte lora_LTXPower, float lora_FREQ, const String &message)
+void send_on_radio(byte lora_LTXPower, float lora_FREQ, const String &message)
 {
 #ifdef ENABLE_LED_SIGNALING
   digitalWrite(TXLED, LOW);
 #endif
 
-  int messageSize = min(message.length(), sizeof(lora_TXBUFF) - 1);
-  message.toCharArray((char *)lora_TXBUFF, messageSize + 1, 0);
-  if (lora_speed == 1200)
+  int message_size = min(message.length(), sizeof(lora_TXBUFF) - 1);
+  message.toCharArray((char *)lora_TXBUFF, message_size + 1, 0);
+  BG_RF95::ModemConfigChoice modem_config;
+  switch (lora_speed)
   {
-    rf95.setModemConfig(BG_RF95::Bw125Cr47Sf512);
+  default:
+  case 1200:
+    modem_config = BG_RF95::Bw125Cr47Sf512;
+    break;
+  case 610:
+    modem_config = BG_RF95::Bw125Cr48Sf1024;
+    break;
+  case 240:
+    modem_config = BG_RF95::Bw125Cr46Sf4096;
+    break;
+  case 210:
+    modem_config = BG_RF95::Bw125Cr47Sf4096;
+    break;
+  case 180:
+    modem_config = BG_RF95::Bw125Cr48Sf4096;
+    break;
   }
-  else if (lora_speed == 610)
-  {
-    rf95.setModemConfig(BG_RF95::Bw125Cr48Sf1024);
-  }
-  else if (lora_speed == 180)
-  {
-    rf95.setModemConfig(BG_RF95::Bw125Cr48Sf4096);
-  }
-  else if (lora_speed == 210)
-  {
-    rf95.setModemConfig(BG_RF95::Bw125Cr47Sf4096);
-  }
-  else if (lora_speed == 240)
-  {
-    rf95.setModemConfig(BG_RF95::Bw125Cr46Sf4096);
-  }
-  else
-  {
-    rf95.setModemConfig(BG_RF95::Bw125Cr45Sf4096);
-  }
+  rf95.setModemConfig(modem_config);
   rf95.setFrequency(lora_FREQ);
   rf95.setTxPower(lora_LTXPower);
-  rf95.sendAPRS(lora_TXBUFF, messageSize);
+  rf95.sendAPRS(lora_TXBUFF, message_size);
   rf95.waitPacketSent();
 #ifdef ENABLE_LED_SIGNALING
   digitalWrite(TXLED, HIGH);
@@ -409,22 +296,27 @@ void batt_read()
   InpVolts = PMU.getVbusVoltage() / ConvertToV;
 #elif T_BEAM_V0_7
   BattVolts = (((float)analogRead(35) / 8192.0) * 2.0 * 3.3 * (1100.0 / 1000.0)) + 0.41; // fixed thanks to Luca IU2FRL
-  // BattVolts = adc1_get_raw(ADC1_CHANNEL_7)/1000;
 #else
   BattVolts = analogRead(35) * 7.221 / 4096;
 #endif
-  Serial.print(BattVolts);
 }
 
-void sendpacket()
+void prepare_and_send_packet()
 {
 #ifdef BUZZER
   int melody[] = {1000, 50, 800, 100};
   buzzer(melody, sizeof(melody) / sizeof(int));
 #endif
   batt_read();
-  prepareAPRSFrame();
-  loraSend(txPower, lora_freq, outString); // send the packet, data is in TXbuff from lora_TXStart to lora_TXEnd
+  APRSPacket packet;
+  aprs_pos_report_factory.create(&packet);
+  String packetStr;
+  packet.encode_tnc2(&packetStr);
+#ifdef KISS_PROTOCOL
+  send_on_tnc(packetStr);
+#endif
+  send_on_radio(txPower, lora_freq, packetStr);
+  sb.update_tx();
 }
 
 void writedisplaytext(String HeaderTxt, String Line1, String Line2, String Line3, String Line4, String Line5)
@@ -527,7 +419,7 @@ void displayInvalidGPS()
   {
     nextTxInfo = (char *)"TX: at valid GPS";
   }
-  writedisplaytext(Tcall, nextTxInfo, "LAT: not valid", "LON: not valid", "SPD: ---  CRS: ---", getSatAndBatInfo());
+  writedisplaytext(callsign, nextTxInfo, "LAT: not valid", "LON: not valid", "SPD: ---  CRS: ---", getSatAndBatInfo());
 }
 
 #if defined(ENABLE_WIFI)
@@ -579,7 +471,7 @@ void sendTelemetryFrame()
     uint8_t ac_volt = (PMU.getVbusVoltage() - 3000) / 28;
     // Pad telemetry message address to 9 characters
     char Tcall_message_char[9];
-    sprintf_P(Tcall_message_char, "%-9s", Tcall);
+    sprintf_P(Tcall_message_char, "%-9s", callsign);
     String Tcall_message = String(Tcall_message_char);
 // Flash the light when telemetry is being sent
 #ifdef ENABLE_LED_SIGNALING
@@ -617,12 +509,12 @@ void sendTelemetryFrame()
     String telemetryEquations = String(":") + Tcall_message + ":EQNS.0,5.1,3000,0,10,0,0,10,0,0,28,3000,0,10,0";
     String telemetryData = String("T#") + tel_sequence_str + "," + String(b_volt) + "," + String(ac_volt) + ",00000000";
     String telemetryBase = "";
-    telemetryBase += Tcall + ">APRS" + tel_path_str + ":";
+    telemetryBase += callsign + ">APRS" + tel_path_str + ":";
     Serial.print(telemetryBase);
-    sendToTNC(telemetryBase + telemetryParamsNames);
-    sendToTNC(telemetryBase + telemetryUnitNames);
-    sendToTNC(telemetryBase + telemetryEquations);
-    sendToTNC(telemetryBase + telemetryData);
+    send_on_tnc(telemetryBase + telemetryParamsNames);
+    send_on_tnc(telemetryBase + telemetryUnitNames);
+    send_on_tnc(telemetryBase + telemetryEquations);
+    send_on_tnc(telemetryBase + telemetryData);
 
     // Show when telemetry is being sent
     writedisplaytext("TEL TX", "", "", "", "", "");
@@ -732,9 +624,7 @@ void setup()
 #endif
 
 #ifdef DIGI_PATH
-  relay_path = DIGI_PATH;
-#else
-  relay_path = "";
+  aprs_pos_report_factory.set_path(DIGI_PATH);
 #endif
 
 #ifdef FIXED_BEACON_EN
@@ -772,45 +662,48 @@ void setup()
 
   // APRS station settings
 
-  aprsSymbolTable = preferences.getString(PREF_APRS_SYMBOL_TABLE);
-  if (aprsSymbolTable.isEmpty())
+  String symbol_table = preferences.getString(PREF_APRS_SYMBOL_TABLE);
+  if (symbol_table.isEmpty())
   {
     preferences.putString(PREF_APRS_SYMBOL_TABLE, APRS_SYMBOL_TABLE);
-    aprsSymbolTable = preferences.getString(PREF_APRS_SYMBOL_TABLE);
+    symbol_table = preferences.getString(PREF_APRS_SYMBOL_TABLE);
   }
-
-  aprsSymbol = preferences.getString(PREF_APRS_SYMBOL);
-  if (aprsSymbol.isEmpty())
+  String symbol_code = preferences.getString(PREF_APRS_SYMBOL);
+  if (symbol_code.isEmpty())
   {
     preferences.putString(PREF_APRS_SYMBOL, APRS_SYMBOL);
-    aprsSymbol = preferences.getString(PREF_APRS_SYMBOL, APRS_SYMBOL);
+    symbol_code = preferences.getString(PREF_APRS_SYMBOL, APRS_SYMBOL);
   }
+  aprs_pos_report_factory.set_symbol(symbol_table.charAt(0), symbol_code.charAt(0));
 
   if (!preferences.getBool(PREF_APRS_COMMENT_INIT))
   {
     preferences.putBool(PREF_APRS_COMMENT_INIT, true);
     preferences.putString(PREF_APRS_COMMENT, MY_COMMENT);
   }
-  aprsComment = preferences.getString(PREF_APRS_COMMENT);
+  String comment = preferences.getString(PREF_APRS_COMMENT);
+  aprs_pos_report_factory.set_comment(comment);
 
   if (!preferences.getBool(PREF_APRS_RELAY_PATH_INIT))
   {
     preferences.putBool(PREF_APRS_RELAY_PATH_INIT, true);
     preferences.putString(PREF_APRS_RELAY_PATH, DIGI_PATH);
   }
-  relay_path = preferences.getString(PREF_APRS_RELAY_PATH);
+  String path = preferences.getString(PREF_APRS_RELAY_PATH);
+  aprs_pos_report_factory.set_path(path);
 
   if (!preferences.getBool(PREF_APRS_SHOW_ALTITUDE_INIT))
   {
     preferences.putBool(PREF_APRS_SHOW_ALTITUDE_INIT, true);
-    preferences.putBool(PREF_APRS_SHOW_ALTITUDE, showAltitude);
+    preferences.putBool(PREF_APRS_SHOW_ALTITUDE, false);
   }
-  showAltitude = preferences.getBool(PREF_APRS_SHOW_ALTITUDE);
+  bool altitude = preferences.getBool(PREF_APRS_SHOW_ALTITUDE);
+  aprs_pos_report_factory.set_altitude(altitude);
 
   if (!preferences.getBool(PREF_APRS_GPS_EN_INIT))
   {
     preferences.putBool(PREF_APRS_GPS_EN_INIT, true);
-    preferences.putBool(PREF_APRS_GPS_EN, gps.enabled());
+    preferences.putBool(PREF_APRS_GPS_EN, true);
   }
   gps.set_state(preferences.getBool(PREF_APRS_GPS_EN));
 
@@ -861,14 +754,14 @@ void setup()
     preferences.putBool(PREF_APRS_LATITUDE_PRESET_INIT, true);
     preferences.putString(PREF_APRS_LATITUDE_PRESET, LATIDUDE_PRESET);
   }
-  aprsLatPreset = preferences.getString(PREF_APRS_LATITUDE_PRESET);
-
+  String fixed_lat = preferences.getString(PREF_APRS_LATITUDE_PRESET);
   if (!preferences.getBool(PREF_APRS_LONGITUDE_PRESET_INIT))
   {
     preferences.putBool(PREF_APRS_LONGITUDE_PRESET_INIT, true);
     preferences.putString(PREF_APRS_LONGITUDE_PRESET, LONGITUDE_PRESET);
   }
-  aprsLonPreset = preferences.getString(PREF_APRS_LONGITUDE_PRESET);
+  String fixed_lon = preferences.getString(PREF_APRS_LONGITUDE_PRESET);
+  aprs_pos_report_factory.set_fixed_position(fixed_lat, fixed_lon);
 
   if (!preferences.getBool(PREF_APRS_FIXED_BEACON_PRESET_INIT))
   {
@@ -958,13 +851,6 @@ void setup()
       clear_preferences = 2;
     }
   }
-
-  if (!preferences.getBool(PREF_APRS_SHOW_CMT_INIT))
-  {
-    preferences.putBool(PREF_APRS_SHOW_CMT_INIT, true);
-    preferences.putBool(PREF_APRS_SHOW_CMT, show_cmt);
-  }
-  show_cmt = preferences.getBool(PREF_APRS_SHOW_CMT);
 
   if (!preferences.getBool(PREF_DEV_BT_EN_INIT))
   {
@@ -1075,13 +961,13 @@ void setup()
 #endif
   writedisplaytext("LoRa-APRS", "", "Init:", "Display OK!", "", "");
 
-  Tcall = prepareCallsign(String(CALLSIGN));
+  callsign = prepareCallsign(String(CALLSIGN));
 #ifdef ENABLE_PREFERENCES
-  Tcall = preferences.getString(PREF_APRS_CALLSIGN);
-  if (Tcall.isEmpty())
+  callsign = preferences.getString(PREF_APRS_CALLSIGN);
+  if (callsign.isEmpty())
   {
     preferences.putString(PREF_APRS_CALLSIGN, String(CALLSIGN));
-    Tcall = preferences.getString(PREF_APRS_CALLSIGN);
+    callsign = preferences.getString(PREF_APRS_CALLSIGN);
   }
 #endif
 
@@ -1093,9 +979,9 @@ void setup()
   }
 
   writedisplaytext("LoRa-APRS", "", "Init:", "RF95 OK!", "", "");
-  writedisplaytext(" " + Tcall, "", "Init:", "Waiting for GPS", "", "");
+  writedisplaytext(" " + callsign, "", "Init:", "Waiting for GPS", "", "");
   xTaskCreate(task_gps, "task_gps", 5000, nullptr, 1, nullptr);
-  writedisplaytext(" " + Tcall, "", "Init:", "GPS Task Created!", "", "");
+  writedisplaytext(" " + callsign, "", "Init:", "GPS Task Created!", "", "");
 #ifndef T_BEAM_V1_0
   adc1_config_width(ADC_WIDTH_BIT_12);
   adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_6);
@@ -1142,14 +1028,14 @@ void setup()
     SerialBT.setPin(BLUETOOTH_PIN);
 #endif
 #ifdef ENABLE_BLUETOOTH
-    SerialBT.begin(String("TTGO LORA APRS ") + Tcall);
+    SerialBT.begin(String("TTGO LORA APRS ") + callsign);
     writedisplaytext("LoRa-APRS", "", "Init:", "BT OK!", "", "");
 #endif
   }
 #endif
 
 #ifdef ENABLE_WIFI
-  webServerCfg = {.callsign = Tcall};
+  webServerCfg = {.callsign = callsign};
   xTaskCreate(taskWebServer, "taskWebServer", 12000, (void *)(&webServerCfg), 1, nullptr);
   writedisplaytext("LoRa-APRS", "", "Init:", "WiFi task started", "   =:-)   ", "");
 #endif
@@ -1195,12 +1081,12 @@ void loop()
           if (gps.fixed())
           {
             writedisplaytext("MAN TX", "", "", "", "", "");
-            sendpacket();
+            prepare_and_send_packet();
           }
           else
           {
             writedisplaytext("FIX TX", "", "", "", "", "");
-            sendpacket();
+            prepare_and_send_packet();
           }
         }
         key_up = true;
@@ -1227,7 +1113,7 @@ void loop()
     // Manually sending beacon from html page
     enableOled();
     writedisplaytext("WEB TX", "", "", "", "", "");
-    sendpacket();
+    prepare_and_send_packet();
     manBeacon = false;
   }
   // Only wake up OLED when necessary, note that DIM is to turn OFF the backlight
@@ -1297,7 +1183,7 @@ void loop()
       enableOled(); // enable OLED
       next_fixed_beacon = millis() + fix_beacon_interval;
       writedisplaytext("TX BCN", "", "", "", "", "");
-      sendpacket();
+      prepare_and_send_packet();
     }
   }
 
@@ -1362,7 +1248,7 @@ void loop()
       enableOled(); // enable OLED
       writedisplaytext("TX KISS", "", "", "", "", "");
       time_to_refresh = millis() + showRXTime;
-      loraSend(txPower, lora_freq, *TNC2DataFrame);
+      send_on_radio(txPower, lora_freq, *TNC2DataFrame);
       delete TNC2DataFrame;
     }
   }
@@ -1397,7 +1283,7 @@ void loop()
       }
       writedisplaytext("RX", "", loraReceivedFrameString, "", "", "");
 #ifdef KISS_PROTOCOL
-      sendToTNC(loraReceivedFrameString);
+      send_on_tnc(loraReceivedFrameString);
 #endif
 #ifdef ENABLE_WIFI
       sendToWebList(loraReceivedFrameString, rf95.lastRssi(), rf95.lastSNR());
@@ -1436,8 +1322,7 @@ void loop()
                        "LAT: " + LatShown, "LON: " + LongShown,
                        "SPD: " + String(gps.speed_kmph(), 1) + "  CRS: " + String(gps.course(), 1),
                        getSatAndBatInfo());
-      sendpacket();
-      sb.update_tx();
+      prepare_and_send_packet();
     }
     else
     {
@@ -1455,8 +1340,8 @@ void loop()
       {
         uint64_t time_to_tx = tx_time - current_time;
         time_to_tx /= 1000;
-        writedisplaytext(Tcall,
-                         "TX in: " + String((long) time_to_tx) + " s",
+        writedisplaytext(callsign,
+                         "TX in: " + String((long)time_to_tx) + " s",
                          "LAT: " + LatShown, "LON: " + LongShown,
                          "SPD: " + String(gps.speed_kmph()) + "  CRS: " + String(gps.course(), 1),
                          getSatAndBatInfo());
